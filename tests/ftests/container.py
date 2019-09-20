@@ -71,7 +71,7 @@ class Container(object):
         conf_line = 'lxc.arch = {}'.format(self.arch)
         Run.run(['echo', conf_line, '>>', self.tmp_cfg_path], shell_bool=True)
 
-        conf_line = 'lxc.mount.entry = {} {} none bind,ro 0 0'.format(
+        conf_line = 'lxc.mount.entry = {} {} none bind,rw 0 0'.format(
                     libcg_dir, consts.LIBCG_MOUNT_POINT)
         Run.run(['echo', conf_line, '>>', self.tmp_cfg_path], shell_bool=True)
 
