@@ -45,14 +45,13 @@ before_install:
 # perform the build and fail immediately on error
 install:
   - ./bootstrap.sh
+  - make clean
+  # enable code coverage
+  - CFLAGS="$CFLAGS -g -O0" ./configure --sysconfdir=/etc --localstatedir=/var --enable-code-coverage
   - make
 
 script:
   - make check
 
 after_success:
-  - make clean
-  # enable code coverage
-  - CFLAGS="$CFLAGS -g -O0" ./configure --sysconfdir=/etc --localstatedir=/var --enable-gcov --enable-code-coverage
-  - make check
   - coveralls --exclude tests --exclude googletest --exclude samples --gcov-options '\-lp'
