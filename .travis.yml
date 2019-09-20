@@ -36,6 +36,7 @@ compiler:
 addons:
   apt:
     packages:
+      - lcov
       - lxc
 
 before_install:
