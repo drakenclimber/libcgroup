@@ -38,6 +38,10 @@ addons:
     packages:
       - lxc
 
+before_install:
+  # see https://github.com/eddyxu/cpp-coveralls
+  - pip install --user cpp-coveralls
+
 # perform the build and fail immediately on error
 install:
   - ./bootstrap.sh
@@ -45,3 +49,10 @@ install:
 
 script:
   - make check
+
+after_success:
+  - make clean
+  # enable code coverage
+  - CFLAGS="$CFLAGS -g -O0" ./configure --sysconfdir=/etc --localstatedir=/var --enable-gcov --enable-code-coverage
+  - make check
+  - coveralls --exclude tests --exclude googletest --exclude samples --gcov-options '\-lp'
