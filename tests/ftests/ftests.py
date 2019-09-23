@@ -93,6 +93,11 @@ def setup(config, do_teardown=True, record_time=False):
             Log.log_debug(e)
 
     Run.run(['sudo', 'lxd', 'init', '--auto'])
+    Run.run('printf "lxd:$(id -u):1\nroot:$(id -u):1\n" | sudo tee -a /etc/subuid',
+            shell_bool=True)
+    Run.run('printf "lxd:$(id -g):1\nroot:$(id -g):1\n" | sudo tee -a /etc/subgid',
+            shell_bool=True)
+
     config.container.create()
     config.container.config()
     try:
