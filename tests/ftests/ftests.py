@@ -95,7 +95,11 @@ def setup(config, do_teardown=True, record_time=False):
     Run.run(['sudo', 'lxd', 'init', '--auto'])
     config.container.create()
     config.container.config()
-    config.container.start()
+    try:
+        config.container.start()
+    except Exception as e:
+        Run.run(['sudo', 'lxc', 'info', '--show-log', config.container.name])
+        raise e
 
     # add the libcgroup library to the container's ld
     echo_cmd = ['bash', '-c', 'echo {} >> /etc/ld.so.conf.d/libcgroup.conf'.format(

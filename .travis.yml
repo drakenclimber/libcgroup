@@ -56,8 +56,8 @@ script:
   - make check
 
 after_failure:
+  - sudo lxc info --show-log TestLibcg
   - cat tests/ftests/test-suite.log
-  - cat tests/ftests/001-cgget-basic_cgget.py.log
 
 after_success:
   - coveralls --exclude tests --exclude googletest --exclude samples --gcov-options '\-lp'
