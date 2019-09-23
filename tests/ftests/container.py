@@ -29,7 +29,7 @@ class Container(object):
     def __init__(self, name, stop_timeout=None, arch=None, cfg_path=None,
                  distro=None, release=None):
         self.name = name
-        self.privileged = False
+        self.privileged = True
 
         if stop_timeout:
             self.stop_timeout = stop_timeout
@@ -73,13 +73,15 @@ class Container(object):
         libcg_dir = os.path.dirname(tests_dir)
 
         # map our UID and GID to the same UID/GID in the container
-        cmd = 'printf "uid {} 1000\ngid {} 1000" | lxc config set test raw.idmap -'.format(
-              os.getuid(), os.getgid())
+        cmd = 'printf "uid {} 1000\ngid {} 1000" | sudo lxc config set {} raw.idmap -'.format(
+              os.getuid(), os.getgid(), self.name)
         Run.run(cmd, shell_bool=True)
 
         # add the libcgroup root directory (where we did the build) into
         # the container
         cmd2 = list()
+        if self.privileged:
+            cmd2.append('sudo')
         cmd2.append('lxc')
         cmd2.append('config')
         cmd2.append('device')
