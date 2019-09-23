@@ -92,6 +92,7 @@ def setup(config, do_teardown=True, record_time=False):
             # log but ignore all exceptions
             Log.log_debug(e)
 
+    Run.run(['sudo', 'lxd', 'init', '--auto'])
     config.container.create()
     config.container.config()
     config.container.start()
