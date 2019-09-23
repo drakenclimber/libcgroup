@@ -38,6 +38,7 @@ addons:
     packages:
       - lcov
       - lxc
+      - lxd
 
 before_install:
   # see https://github.com/eddyxu/cpp-coveralls
