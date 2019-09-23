@@ -80,6 +80,46 @@ def parse_args():
 
     return config
 
+def update_host_subuid():
+    subuid_line1 = 'lxd:{}:1'.format(os.getuid())
+    subuid_line2 = 'root:{}:1'.format(os.getuid())
+    found_line1 = False
+    found_line2 = False
+
+    with open('/etc/subuid') as ufile:
+        for line in ufile.readlines():
+            if line.strip() == subuid_line1:
+                found_line1 = True
+            elif line.strip() == subuid_line2:
+                found_line2 = True
+
+    if not found_line1:
+        Run.run('sudo sh -c "echo {} >> /etc/subuid"'.format(
+                subuid_line1), shell_bool=True)
+    if not found_line2:
+        Run.run('sudo sh -c "echo {} >> /etc/subuid"'.format(
+                subuid_line2), shell_bool=True)
+
+def update_host_subgid():
+    subgid_line1 = 'lxd:{}:1'.format(os.getgid())
+    subgid_line2 = 'root:{}:1'.format(os.getgid())
+    found_line1 = False
+    found_line2 = False
+
+    with open('/etc/subgid') as ufile:
+        for line in ufile.readlines():
+            if line.strip() == subgid_line1:
+                found_line1 = True
+            elif line.strip() == subgid_line2:
+                found_line2 = True
+
+    if not found_line1:
+        Run.run('sudo sh -c "echo {} >> /etc/subgid"'.format(
+                subgid_line1), shell_bool=True)
+    if not found_line2:
+        Run.run('sudo sh -c "echo {} >> /etc/subgid"'.format(
+                subgid_line2), shell_bool=True)
+
 def setup(config, do_teardown=True, record_time=False):
     global setup_time
     start_time = time.time()
@@ -93,10 +133,8 @@ def setup(config, do_teardown=True, record_time=False):
             Log.log_debug(e)
 
     Run.run(['sudo', 'lxd', 'init', '--auto'])
-    Run.run('printf "lxd:$(id -u):1\nroot:$(id -u):1\n" | sudo tee -a /etc/subuid',
-            shell_bool=True)
-    Run.run('printf "lxd:$(id -g):1\nroot:$(id -g):1\n" | sudo tee -a /etc/subgid',
-            shell_bool=True)
+    update_host_subuid()
+    update_host_subgid()
 
     config.container.create()
     config.container.config()
