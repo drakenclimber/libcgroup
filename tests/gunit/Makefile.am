@@ -37,4 +37,5 @@ check_PROGRAMS = gtest
 TESTS = gtest
 
 gtest_SOURCES = gtest.cpp \
-		001-path.cpp
+		001-path.cpp \
+		002-cg_chmod_path.cpp
