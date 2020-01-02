@@ -21,6 +21,9 @@ static struct option const long_options[] =
 	{"help", no_argument, NULL, 'h'},
 	{"all",  no_argument, NULL, 'a'},
 	{"values-only", no_argument, NULL, 'v'},
+	{"v1", no_argument, NULL, '1'},
+	{"v2", no_argument, NULL, '2'},
+	{"executable", required_argument, NULL, 'x'},
 	{NULL, 0, NULL, 0}
 };
 
@@ -328,13 +331,22 @@ int main(int argc, char *argv[])
 	}
 
 	/* Parse arguments. */
-	while ((c = getopt_long(argc, argv, "r:hnvg:a", long_options, NULL))
+	while ((c = getopt_long(argc, argv, "r:hnvg:a12x:", long_options, NULL))
 		> 0) {
 		switch (c) {
 		case 'h':
 			usage(0, argv[0]);
 			result = 0;
 			goto err;
+			break;
+
+		case '1':
+		case '2':
+		case 'x':
+			/*
+			 * ignore these options as they are part of the
+			 * abstraction layer
+			 */
 			break;
 
 		case 'n':

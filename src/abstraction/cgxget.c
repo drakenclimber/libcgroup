@@ -9,6 +9,13 @@
 
 #define CGGET "cgget"
 
+static struct option const long_options[] =
+{
+	{"v1", no_argument, NULL, '1'},
+	{"v2", no_argument, NULL, '2'},
+	{"executable", required_argument, NULL, 'x'},
+};
+
 static void usage(const char *program_name)
 {
 	printf("Usage: %s [-1] [-2]", program_name);
@@ -18,22 +25,11 @@ static void usage(const char *program_name)
 		"v2 format\n");
 }
 
-static void remove_arg(int * const argc, char *argv[], int arg_to_remove)
-{
-	int i;
-
-	for (i = arg_to_remove; i < (*argc) - 1; i++) {
-		argv[i] = argv[i + 1];
-	}
-
-	argv[(*argc) - 1] = NULL;
-	(*argc)--;
-}
-
 int main(int argc, char *argv[])
 {
-	int result = 0, cur_arg = 0;
 	bool v1 = false, v2 = false;
+	int result = 0, c;
+	char *cgget = CGGET;
 
 	if (argc < 2) {
 		usage(argv[0]);
@@ -47,24 +43,18 @@ int main(int argc, char *argv[])
 	 * extract our options from argv[] but leave the remaining options
 	 * intact for cgget to parse
 	 */
-	while (cur_arg < argc) {
-		if ((strncmp("-1", argv[cur_arg], strlen("-1")) == 0) ||
-		    (strncmp("--v1", argv[cur_arg], strlen("--v1")) == 0)) {
+	while ((c = getopt_long(argc, argv, ":12x:", long_options, NULL)) > 0) {
+		switch (c) {
+		case '1':
 			v1 = true;
-
-			/* don't pass this argument into cgget */
-			remove_arg(&argc, argv, cur_arg);
-		}
-
-		if ((strncmp("-2", argv[cur_arg], strlen("-2")) == 0) ||
-		    (strncmp("--v2", argv[cur_arg], strlen("--v2")) == 0)) {
+			break;
+		case '2':
 			v2 = true;
-
-			/* don't pass this argument into cgget */
-			remove_arg(&argc, argv, cur_arg);
+			break;
+		case 'x':
+			cgget = optarg;
+			break;
 		}
-
-		cur_arg++;
 	}
 
 	if (v1 && v2) {
@@ -73,7 +63,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	result = execvp(CGGET, argv);
+	result = execvp(cgget, argv);
 
 	return result;
 }
