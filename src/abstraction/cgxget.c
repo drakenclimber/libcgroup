@@ -13,6 +13,11 @@ static struct option const long_options[] =
 {
 	{"v1", no_argument, NULL, '1'},
 	{"v2", no_argument, NULL, '2'},
+	{"variable", required_argument, NULL, 'r'},
+	{"help", no_argument, NULL, 'h'},
+	{"all",  no_argument, NULL, 'a'},
+	{"values-only", no_argument, NULL, 'v'},
+	{NULL, 0, NULL, 0}
 };
 
 static void usage(const char *program_name)
