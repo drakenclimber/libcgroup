@@ -13,7 +13,6 @@ static struct option const long_options[] =
 {
 	{"v1", no_argument, NULL, '1'},
 	{"v2", no_argument, NULL, '2'},
-	{"executable", required_argument, NULL, 'x'},
 };
 
 static void usage(const char *program_name)
@@ -30,6 +29,9 @@ int main(int argc, char *argv[])
 	bool v1 = false, v2 = false;
 	int result = 0, c;
 	char *cgget = CGGET;
+	int cgget_argc = 0;
+	char *cgget_argv[100] = {0};
+	char *tmp;
 
 	if (argc < 2) {
 		usage(argv[0]);
@@ -40,10 +42,10 @@ int main(int argc, char *argv[])
 	}
 
 	/*
-	 * extract our options from argv[] but leave the remaining options
-	 * intact for cgget to parse
+	 * Rebuild the options list without our parameters in it
 	 */
-	while ((c = getopt_long(argc, argv, ":12x:", long_options, NULL)) > 0) {
+	while ((c = getopt_long(argc, argv, "r:hnvg:a12", long_options,
+				NULL)) > 0) {
 		switch (c) {
 		case '1':
 			v1 = true;
@@ -51,10 +53,42 @@ int main(int argc, char *argv[])
 		case '2':
 			v2 = true;
 			break;
-		case 'x':
-			cgget = optarg;
+
+		case 'r':
+		case 'g':
+			tmp = malloc(3);
+			tmp[0] = '-';
+			tmp[1] = c;
+			tmp[2] = '\0';
+			cgget_argv[cgget_argc] = tmp;
+			cgget_argc++;
+
+			if (optarg) {
+				cgget_argv[cgget_argc] = optarg;
+				cgget_argc++;
+			}
+			break;
+
+		case 'h':
+		case 'n':
+		case 'v':
+		case 'a':
+			tmp = malloc(3);
+			tmp[0] = '-';
+			tmp[1] = c;
+			tmp[2] = '\0';
+			cgget_argv[cgget_argc] = tmp;
+			cgget_argc++;
 			break;
 		}
+	}
+
+	/* append any non-getopt parameters */
+	while(argv[optind] != NULL) {
+		cgget_argv[cgget_argc] = argv[optind];
+		cgget_argc++;
+
+		optind++;
 	}
 
 	if (v1 && v2) {
@@ -63,7 +97,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	result = execvp(cgget, argv);
+	result = execvp(cgget, cgget_argv);
 
 	return result;
 }
