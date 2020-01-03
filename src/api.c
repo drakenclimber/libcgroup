@@ -63,6 +63,12 @@ static __thread char errtext[MAXLEN];
 /* Task command name length */
 #define TASK_COMM_LEN 16
 
+/* cgroup v2 controllers file */
+#define CGV2_CONTROLLERS_FILE "cgroup.controllers"
+
+/* maximum line length when reading the cgroup.controllers file */
+#define LL_MAX			100
+
 /* Check if cgroup_init has been called or not. */
 static int cgroup_initialized;
 
@@ -1085,6 +1091,7 @@ static int cgroup_process_v1_mnt(char *controllers[], struct mntent *ent,
 		cg_mount_table[*found_mnt].mount.path[FILENAME_MAX-1] =
 			'\0';
 		cg_mount_table[*found_mnt].mount.next = NULL;
+		cg_mount_table[*found_mnt].version = CGROUP_V1;
 		cgroup_dbg("Found cgroup option %s, count %d\n",
 			ent->mnt_opts, *found_mnt);
 		(*found_mnt)++;
@@ -1143,6 +1150,96 @@ static int cgroup_process_v1_mnt(char *controllers[], struct mntent *ent,
 	}
 
 out:
+	return ret;
+}
+
+/**
+ * Process a cgroup v2 mount and add it to cg_mount_table if it's not a
+ * duplicate.
+ *
+ *	@param ent File system description of cgroup mount being processed
+ *	@param found_mnt cg_mount_table index
+ */
+static int cgroup_process_v2_mnt(struct mntent *ent, int *found_mnt)
+{
+	char cgroup_controllers_path[FILENAME_MAX];
+	char *ret_c = NULL, line[LL_MAX], *stok_buff = NULL;
+	int ret, i, duplicate;
+	FILE *fp = NULL;
+
+	/* determine what v2 controllers are available on this mount */
+	snprintf(cgroup_controllers_path, FILENAME_MAX, "%s/%s", ent->mnt_dir,
+		 CGV2_CONTROLLERS_FILE);
+
+	fp = fopen(cgroup_controllers_path, "re");
+	if (!fp) {
+		ret = ECGOTHER;
+		goto out;
+	}
+
+	ret_c = fgets(line, LL_MAX, fp);
+	if (ret_c == NULL) {
+		ret = ECGEOF;
+		goto out;
+	}
+
+	/* remove the trailing newline */
+	ret_c[strlen(ret_c) - 1] = '\0';
+
+	/*
+	 * cgroup.controllers returns a list of available controllers in
+	 * the following format:
+	 * 	cpuset cpu io memory pids rdma
+	 */
+	stok_buff = strtok(ret_c, " ");
+	while (stok_buff) {
+		/* do not have duplicates in mount table */
+		duplicate = 0;
+
+		for  (i = 0; i < *found_mnt; i++) {
+			if (strncmp(cg_mount_table[i].name, stok_buff,
+					FILENAME_MAX) == 0) {
+				duplicate = 1;
+				break;
+			}
+		}
+
+		if (duplicate) {
+			cgroup_dbg("controller %s is already mounted on %s\n",
+				stok_buff, cg_mount_table[i].mount.path);
+
+			ret = cg_add_duplicate_mount(&cg_mount_table[i],
+					ent->mnt_dir);
+			if (ret)
+				goto out;
+
+			/* advance to the next controller */
+			stok_buff = strtok(NULL, " ");
+			continue;
+		}
+
+		/* this controller is not in the mount table.  add it */
+		strncpy(cg_mount_table[*found_mnt].name,
+			stok_buff, FILENAME_MAX);
+		cg_mount_table[*found_mnt].name[FILENAME_MAX-1] = '\0';
+		strncpy(cg_mount_table[*found_mnt].mount.path,
+			ent->mnt_dir, FILENAME_MAX);
+		cg_mount_table[*found_mnt].mount.path[FILENAME_MAX-1] =
+			'\0';
+		cg_mount_table[*found_mnt].mount.next = NULL;
+		cg_mount_table[*found_mnt].version = CGROUP_V2;
+		cgroup_dbg("Found cgroup option %s, count %d\n",
+			stok_buff, *found_mnt);
+		(*found_mnt)++;
+
+		/* advance to the next controller */
+		stok_buff = strtok(NULL, " ");
+	}
+
+out:
+	if (fp)
+		fclose(fp);
+
 	return ret;
 }
 
@@ -1251,6 +1348,11 @@ int cgroup_init(void)
 		if (strcmp(ent->mnt_type, "cgroup") == 0) {
 			ret = cgroup_process_v1_mnt(controllers, ent,
 						    &found_mnt);
+			if (ret)
+				goto unlock_exit;
+		}
+		else if (strcmp(ent->mnt_type, "cgroup2") == 0) {
+			ret = cgroup_process_v2_mnt(ent, &found_mnt);
 			if (ret)
 				goto unlock_exit;
 		}
@@ -2681,25 +2783,27 @@ int cgroup_get_cgroup(struct cgroup *cgroup)
 		 * Get the uid and gid information
 		 */
 
-		ret = asprintf(&control_path, "%s/tasks", path);
+		if (cg_mount_table[i].version == CGROUP_V1) {
+			ret = asprintf(&control_path, "%s/tasks", path);
 
-		if (ret < 0) {
-			last_errno = errno;
-			error = ECGOTHER;
-			goto unlock_error;
-		}
+			if (ret < 0) {
+				last_errno = errno;
+				error = ECGOTHER;
+				goto unlock_error;
+			}
 
-		if (stat(control_path, &stat_buffer)) {
-			last_errno = errno;
+			if (stat(control_path, &stat_buffer)) {
+				last_errno = errno;
+				free(control_path);
+				error = ECGOTHER;
+				goto unlock_error;
+			}
+
+			cgroup->tasks_uid = stat_buffer.st_uid;
+			cgroup->tasks_gid = stat_buffer.st_gid;
+
 			free(control_path);
-			error = ECGOTHER;
-			goto unlock_error;
 		}
-
-		cgroup->tasks_uid = stat_buffer.st_uid;
-		cgroup->tasks_gid = stat_buffer.st_gid;
-
-		free(control_path);
 
 		cgc = cgroup_add_controller(cgroup,
 				cg_mount_table[i].name);
