@@ -1540,6 +1540,7 @@ err:
 int cgroup_attach_task_pid(struct cgroup *cgroup, pid_t tid)
 {
 	char path[FILENAME_MAX];
+	enum cg_version_t version;
 	int i, ret = 0;
 
 	if (!cgroup_initialized) {
@@ -1574,7 +1575,27 @@ int cgroup_attach_task_pid(struct cgroup *cgroup, pid_t tid)
 			if (!cg_build_path(cgroup->name, path,
 					cgroup->controller[i]->name))
 				continue;
-			strncat(path, "/tasks", sizeof(path) - strlen(path));
+
+			ret = cgroup_get_controller_version(
+					cgroup->controller[i]->name, &version);
+			if (ret)
+				return ret;
+
+			switch(version) {
+			case CGROUP_V1:
+				strncat(path, "/tasks",
+					sizeof(path) - strlen(path));
+				break;
+
+			case CGROUP_V2:
+				strncat(path, "/cgroup.procs",
+					sizeof(path) - strlen(path));
+				break;
+
+			default:
+				return ECGINVAL;
+			}
+
 			ret = __cgroup_attach_task_pid(path, tid);
 			if (ret)
 				return ret;
@@ -5236,4 +5257,18 @@ int cgroup_get_subsys_mount_point_end(void **handle)
 	return 0;
 }
 
+int cgroup_get_controller_version(const char * const controller,
+		enum cg_version_t * const version)
+{
+	int i;
 
+	for (i = 0; cg_mount_table[i].name[0] != '\0'; i++) {
+		if (strncmp(cg_mount_table[i].name, controller,
+				sizeof(cg_mount_table[i].name)) == 0) {
+			*version = cg_mount_table[i].version;
+			return 0;
+		}
+	}
+
+	return ENOENT;
+}
