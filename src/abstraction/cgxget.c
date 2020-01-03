@@ -29,6 +29,39 @@ static void usage(const char *program_name)
 		"v2 format\n");
 }
 
+static int parse_abstract_opts(int argc, char *argv[],
+			       bool * const v1, bool * const v2)
+{
+	int c;
+
+	while ((c = getopt_long(argc, argv, "r:hnvg:a12", long_options,
+				NULL)) > 0) {
+		switch (c) {
+		case '1':
+			*v1 = true;
+			break;
+		case '2':
+			*v2 = true;
+			break;
+
+		/* ignore all other options at this time */
+		default:
+			break;
+		}
+	}
+
+	if ((*v1) && (*v2)) {
+		/* both v1 and v2 simultaneously doesn't make sense */
+		usage(argv[0]);
+		return -1;
+	}
+
+	/* reset the getopt index back to the start */
+	optind = 0;
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	bool v1 = false, v2 = false;
@@ -47,18 +80,18 @@ int main(int argc, char *argv[])
 	}
 
 	/*
+	 * Parse the options for the abstraction layer
+	 */
+	result = parse_abstract_opts(argc, argv, &v1, &v2);
+	if (result < 0)
+		goto err;
+
+	/*
 	 * Rebuild the options list without our parameters in it
 	 */
 	while ((c = getopt_long(argc, argv, "r:hnvg:a12", long_options,
 				NULL)) > 0) {
 		switch (c) {
-		case '1':
-			v1 = true;
-			break;
-		case '2':
-			v2 = true;
-			break;
-
 		case 'r':
 		case 'g':
 			tmp = malloc(3);
@@ -85,6 +118,9 @@ int main(int argc, char *argv[])
 			cgget_argv[cgget_argc] = tmp;
 			cgget_argc++;
 			break;
+
+		default:
+			break;
 		}
 	}
 
@@ -96,13 +132,8 @@ int main(int argc, char *argv[])
 		optind++;
 	}
 
-	if (v1 && v2) {
-		/* both v1 and v2 simultaneously doesn't make sense */
-		usage(argv[0]);
-		return 1;
-	}
-
 	result = execvp(cgget, cgget_argv);
 
-	return result;
+err:
+	return (result < 0) ? -result : result;
 }
