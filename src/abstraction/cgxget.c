@@ -112,8 +112,9 @@ int main(int argc, char *argv[])
 {
 	bool v1 = false, v2 = false;
 	int result = 0;
-	char *cgget = CGGET;
+	// TODO - should this move to parse_cgget_opts()?
 	int cgget_argc = 0;
+	// TODO - make this hardcoded limit more robust and not hardcoded :)
 	char *cgget_argv[100] = {0};
 
 	if (argc < 2) {
@@ -133,7 +134,7 @@ int main(int argc, char *argv[])
 	if (result < 0)
 		goto err;
 
-	result = execvp(cgget, cgget_argv);
+	result = execvp(CGGET, cgget_argv);
 
 err:
 	return (result < 0) ? -result : result;
