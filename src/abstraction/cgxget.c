@@ -22,11 +22,22 @@ static struct option const long_options[] =
 
 static void usage(const char *program_name)
 {
-	printf("Usage: %s [-1] [-2]", program_name);
+	printf("Usage: %s [-1] [-2]\n", program_name);
 	printf("  -1, --v1			Provided parameters are in "
 		"v1 format\n");
 	printf("  -2, --v2			Provided parameters are in "
 		"v2 format\n");
+	printf("  -a, --all			Print info about all relevant "\
+		"controllers\n");
+	printf("  -g <controllers>		Controller which info should "\
+		"be displayed\n");
+	printf("  -g <controllers>:<path>	Control group which info "\
+		"should be displayed\n");
+	printf("  -h, --help			Display this help\n");
+	printf("  -n				Do not print headers\n");
+	printf("  -r, --variable  <name>	Define parameter to display\n");
+	printf("  -v, --values-only		Print only values, not "\
+		"parameter names\n");
 }
 
 static int parse_abstract_opts(int argc, char *argv[],
@@ -43,6 +54,9 @@ static int parse_abstract_opts(int argc, char *argv[],
 		case '2':
 			*v2 = true;
 			break;
+		case 'h':
+			usage(argv[0]);
+			exit(0);
 
 		/* ignore all other options at this time */
 		default:
@@ -68,6 +82,9 @@ static int parse_cgget_opts(int argc, char *argv[],
 {
 	char *tmp;
 	int c;
+
+	cgget_argv[*cgget_argc] = CGGET;
+	(*cgget_argc)++;
 
 	/* Rebuild the options list without our parameters in it */
 	while ((c = getopt_long(argc, argv, "r:hnvg:a12", long_options,
