@@ -141,11 +141,18 @@ int main(int argc, char *argv[])
 
 	/* Parse the options for the abstraction layer */
 	result = parse_abstract_opts(argc, argv, &v1, &v2);
-	if (result < 0)
+	if (result)
 		goto err;
 
+	result = cgroup_init();
+	if (result) {
+		fprintf(stderr, "%s: libcgroup initialization failed: %s\n",
+			argv[0], cgroup_strerror(result));
+		goto err;
+	}
+
 	result = parse_cgget_opts(argc, argv, &cgget_argc, cgget_argv);
-	if (result < 0)
+	if (result)
 		goto err;
 
 	result = execvp(CGGET, cgget_argv);

@@ -1240,6 +1240,12 @@ out:
 	if (fp)
 		fclose(fp);
 
+	if (ret == ECGEOF)
+		/* End of file is not an error.  it simply means there were
+		 * no controllers to add to the list
+		 */
+		ret = 0;
+
 	return ret;
 }
 
