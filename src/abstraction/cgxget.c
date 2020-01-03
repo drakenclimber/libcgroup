@@ -136,10 +136,7 @@ int main(int argc, char *argv[])
 
 	if (argc < 2) {
 		usage(argv[0]);
-		/*
-		 * don't return here so that we can return the usage from
-		 * cgget as well
-		 */
+		goto err;
 	}
 
 	/* Parse the options for the abstraction layer */
