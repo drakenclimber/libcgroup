@@ -62,61 +62,34 @@ static int parse_abstract_opts(int argc, char *argv[],
 	return 0;
 }
 
-int main(int argc, char *argv[])
+
+static int parse_cgget_opts(int argc, char *argv[],
+			    int * const cgget_argc, char *cgget_argv[])
 {
-	bool v1 = false, v2 = false;
-	int result = 0, c;
-	char *cgget = CGGET;
-	int cgget_argc = 0;
-	char *cgget_argv[100] = {0};
 	char *tmp;
+	int c;
 
-	if (argc < 2) {
-		usage(argv[0]);
-		/*
-		 * don't return here so that we can return the usage from
-		 * cgget as well
-		 */
-	}
-
-	/*
-	 * Parse the options for the abstraction layer
-	 */
-	result = parse_abstract_opts(argc, argv, &v1, &v2);
-	if (result < 0)
-		goto err;
-
-	/*
-	 * Rebuild the options list without our parameters in it
-	 */
+	/* Rebuild the options list without our parameters in it */
 	while ((c = getopt_long(argc, argv, "r:hnvg:a12", long_options,
 				NULL)) > 0) {
 		switch (c) {
-		case 'r':
+		case 'a':
 		case 'g':
-			tmp = malloc(3);
-			tmp[0] = '-';
-			tmp[1] = c;
-			tmp[2] = '\0';
-			cgget_argv[cgget_argc] = tmp;
-			cgget_argc++;
-
-			if (optarg) {
-				cgget_argv[cgget_argc] = optarg;
-				cgget_argc++;
-			}
-			break;
-
 		case 'h':
 		case 'n':
+		case 'r':
 		case 'v':
-		case 'a':
 			tmp = malloc(3);
 			tmp[0] = '-';
 			tmp[1] = c;
 			tmp[2] = '\0';
-			cgget_argv[cgget_argc] = tmp;
-			cgget_argc++;
+			cgget_argv[*cgget_argc] = tmp;
+			(*cgget_argc)++;
+
+			if (optarg) {
+				cgget_argv[*cgget_argc] = optarg;
+				(*cgget_argc)++;
+			}
 			break;
 
 		default:
@@ -126,11 +99,39 @@ int main(int argc, char *argv[])
 
 	/* append any non-getopt parameters */
 	while(argv[optind] != NULL) {
-		cgget_argv[cgget_argc] = argv[optind];
-		cgget_argc++;
+		cgget_argv[*cgget_argc] = argv[optind];
+		(*cgget_argc)++;
 
 		optind++;
 	}
+
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	bool v1 = false, v2 = false;
+	int result = 0;
+	char *cgget = CGGET;
+	int cgget_argc = 0;
+	char *cgget_argv[100] = {0};
+
+	if (argc < 2) {
+		usage(argv[0]);
+		/*
+		 * don't return here so that we can return the usage from
+		 * cgget as well
+		 */
+	}
+
+	/* Parse the options for the abstraction layer */
+	result = parse_abstract_opts(argc, argv, &v1, &v2);
+	if (result < 0)
+		goto err;
+
+	result = parse_cgget_opts(argc, argv, &cgget_argc, cgget_argv);
+	if (result < 0)
+		goto err;
 
 	result = execvp(cgget, cgget_argv);
 
