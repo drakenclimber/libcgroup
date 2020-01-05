@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include "abstraction-common.h"
+
 #define CGGET "cgget"
 
 static struct option const long_options[] =
@@ -80,8 +82,9 @@ static int parse_abstract_opts(int argc, char *argv[],
 static int parse_cgget_opts(int argc, char *argv[],
 			    int * const cgget_argc, char *cgget_argv[])
 {
+	char *new_settings[MAX_NEW_SETTINGS];
 	char *tmp;
-	int c;
+	int c, i, ret;
 
 	cgget_argv[*cgget_argc] = CGGET;
 	(*cgget_argc)++;
@@ -94,7 +97,6 @@ static int parse_cgget_opts(int argc, char *argv[],
 		case 'g':
 		case 'h':
 		case 'n':
-		case 'r':
 		case 'v':
 			tmp = malloc(3);
 			tmp[0] = '-';
@@ -107,6 +109,33 @@ static int parse_cgget_opts(int argc, char *argv[],
 				cgget_argv[*cgget_argc] = optarg;
 				(*cgget_argc)++;
 			}
+			break;
+
+		case 'r':
+			if (optarg == NULL) {
+				usage(argv[0]);
+				return 1;
+			}
+
+			ret = cgroup_convert_setting(optarg, new_settings);
+			if (ret)
+				goto err;
+
+			i = 0;
+			while(new_settings[i] != NULL) {
+				cgget_argv[*cgget_argc] = strdup("-r");
+				if (!cgget_argv[*cgget_argc]) {
+					ret = ECGOTHER;
+					goto err;
+				}
+				(*cgget_argc)++;
+
+				cgget_argv[*cgget_argc] = strdup(new_settings[i]);
+				(*cgget_argc)++;
+
+				i++;
+			}
+
 			break;
 
 		default:
@@ -122,7 +151,14 @@ static int parse_cgget_opts(int argc, char *argv[],
 		optind++;
 	}
 
-	return 0;
+err:
+	i = 0;
+	while(new_settings[i] != NULL) {
+		free(new_settings[i]);
+		i++;
+	}
+
+	return ret;
 }
 
 int main(int argc, char *argv[])

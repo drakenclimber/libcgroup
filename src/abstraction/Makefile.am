@@ -5,6 +5,6 @@ LDADD = $(top_builddir)/src/.libs/libcgroup.la
 
 bin_PROGRAMS = cgxget
 
-cgaget_SOURCES = cgxget.c
-cgaget_LIBS = $(CODE_COVERAGE_LIBS)
-cgaget_CFLAGS = $(CODE_COVERAGE_CFLAGS)
+cgxget_SOURCES = cgxget.c abstraction-common.c abstraction-common.h
+cgxget_LIBS = $(CODE_COVERAGE_LIBS)
+cgxget_CFLAGS = $(CODE_COVERAGE_CFLAGS)
