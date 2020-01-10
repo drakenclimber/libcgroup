@@ -43,18 +43,31 @@ static void usage(const char *program_name)
 }
 
 static int parse_abstract_opts(int argc, char *argv[],
-			       bool * const v1, bool * const v2)
+			       enum cg_version_t * const version)
 {
 	int c;
+	bool version_set = false;
+
+	*version = CGROUP_UNK;
 
 	while ((c = getopt_long(argc, argv, "r:hnvg:a12", long_options,
 				NULL)) > 0) {
 		switch (c) {
 		case '1':
-			*v1 = true;
+			if (version_set) {
+				usage(argv[0]);
+				exit(0);
+			}
+			version_set = true;
+			*version = CGROUP_V1;
 			break;
 		case '2':
-			*v2 = true;
+			if (version_set) {
+				usage(argv[0]);
+				exit(0);
+			}
+			version_set = true;
+			*version = CGROUP_V2;
 			break;
 		case 'h':
 			usage(argv[0]);
@@ -66,12 +79,6 @@ static int parse_abstract_opts(int argc, char *argv[],
 		}
 	}
 
-	if ((*v1) && (*v2)) {
-		/* both v1 and v2 simultaneously doesn't make sense */
-		usage(argv[0]);
-		return -1;
-	}
-
 	/* reset the getopt index back to the start */
 	optind = 0;
 
@@ -80,9 +87,10 @@ static int parse_abstract_opts(int argc, char *argv[],
 
 
 static int parse_cgget_opts(int argc, char *argv[],
-			    int * const cgget_argc, char *cgget_argv[])
+			    int * const cgget_argc, char *cgget_argv[],
+			    enum cg_version_t args_version)
 {
-	char *new_settings[MAX_NEW_SETTINGS];
+	char *new_settings[MAX_NEW_SETTINGS] = { '\0' };
 	char *tmp;
 	int c, i, ret;
 
@@ -117,12 +125,14 @@ static int parse_cgget_opts(int argc, char *argv[],
 				return 1;
 			}
 
-			ret = cgroup_convert_setting(optarg, new_settings);
+			ret = cgroup_convert_setting(args_version, optarg,
+						     new_settings);
 			if (ret)
 				goto err;
 
 			i = 0;
 			while(new_settings[i] != NULL) {
+				fprintf(stdout, "newstng[%d] = %s\n", i, new_settings[i]);
 				cgget_argv[*cgget_argc] = strdup("-r");
 				if (!cgget_argv[*cgget_argc]) {
 					ret = ECGOTHER;
@@ -135,7 +145,6 @@ static int parse_cgget_opts(int argc, char *argv[],
 
 				i++;
 			}
-
 			break;
 
 		default:
@@ -150,7 +159,6 @@ static int parse_cgget_opts(int argc, char *argv[],
 
 		optind++;
 	}
-
 err:
 	i = 0;
 	while(new_settings[i] != NULL) {
@@ -163,7 +171,7 @@ err:
 
 int main(int argc, char *argv[])
 {
-	bool v1 = false, v2 = false;
+	enum cg_version_t version;
 	int result = 0;
 	// TODO - should this move to parse_cgget_opts()?
 	int cgget_argc = 0;
@@ -176,7 +184,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Parse the options for the abstraction layer */
-	result = parse_abstract_opts(argc, argv, &v1, &v2);
+	result = parse_abstract_opts(argc, argv, &version);
 	if (result)
 		goto err;
 
@@ -187,12 +195,17 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
-	result = parse_cgget_opts(argc, argv, &cgget_argc, cgget_argv);
+	result = parse_cgget_opts(argc, argv, &cgget_argc, cgget_argv,
+				  version);
 	if (result)
 		goto err;
 
-	result = execvp(CGGET, cgget_argv);
+	fprintf(stdout, "cgget");
+	for (int i = 0; i < cgget_argc; i++)
+		fprintf(stdout, " %s", cgget_argv[i]);
+	fprintf(stdout, "\n");
 
+	result = execvp(CGGET, cgget_argv);
 err:
 	return (result < 0) ? -result : result;
 }

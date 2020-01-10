@@ -7,7 +7,8 @@
 
 #define MAX_NEW_SETTINGS	10
 
-int cgroup_convert_setting(const char * const prev_setting,
+int cgroup_convert_setting(enum cg_version_t in_version,
+			   const char * const prev_setting,
 			   char *new_settings[]);
 
 #endif /* __ABSTRACTION_COMMON */
