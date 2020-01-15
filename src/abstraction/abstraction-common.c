@@ -26,13 +26,44 @@ static int get_controller_from_setting(const char * const setting,
 	return 0;
 }
 
+static int convert_v1_to_v2(const char * const controller,
+			    const char * const prev_setting,
+			    char *new_settings[])
+{
+	int ret = 0;
+
+	if (strcmp(controller, "cpu") == 0)
+		ret = cpu_v1_to_v2(prev_setting, new_settings);
+	else
+		/* currently unsupported controller */
+		ret = ECGINVAL;
+
+	return ret;
+}
+
+static int convert_v2_to_v1(const char * const controller,
+			    const char * const prev_setting,
+			    char *new_settings[])
+{
+	int ret = 0;
+
+	if (strcmp(controller, "cpu") == 0)
+		ret = cpu_v2_to_v1(prev_setting, new_settings);
+	else
+		/* currently unsupported controller */
+		ret = ECGINVAL;
+
+	return ret;
+}
+
 int cgroup_convert_setting(enum cg_version_t in_version,
 			   const char * const prev_setting,
 			   char *new_settings[])
 {
 	enum cg_version_t ctrl_version;
 	char *controller;
-	int ret = 0, new_settings_idx = 0;
+	int ret = 0;
+	int new_settings_idx = 0;
 
 	ret = get_controller_from_setting(prev_setting,	&controller);
 	if (ret)
@@ -57,10 +88,23 @@ int cgroup_convert_setting(enum cg_version_t in_version,
 		case CGROUP_UNK:
 			break;
 		case CGROUP_V1:
+			if (ctrl_version == CGROUP_V2) {
+				ret = convert_v1_to_v2(controller,
+						       prev_setting,
+						       new_settings);
+				if (ret)
+					goto err;
+			}
 			break;
 		case CGROUP_V2:
+			if (ctrl_version == CGROUP_V1) {
+				ret = convert_v2_to_v1(controller,
+						       prev_setting,
+						       new_settings);
+				if (ret)
+					goto err;
+			}
 			break;
-
 		default:
 			cgroup_err("Unsupported cgroup version: %d\n",
 				   in_version);
