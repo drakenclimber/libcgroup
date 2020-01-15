@@ -10,6 +10,12 @@ bin_PROGRAMS = cgexec cgclassify cgcreate cgset cgget cgdelete lssubsys\
 
 sbin_PROGRAMS = cgconfigparser cgclear
 
+lib_LTLIBRARIES = libcgrouptools.la
+libcgrouptools_la_SOURCES = tools-common.c tools-common.h cgget.c
+libcgrouptools_la_CFLAGS = $(CODE_COVERAGE_CFLAGS) -DSTATIC=static
+libcgrouptools_la_LDFLAGS = -Wl \
+	-version-number $(LIBRARY_VERSION_MAJOR):$(LIBRARY_VERSION_MINOR):$(LIBRARY_VERSION_RELEASE)
+
 cgexec_SOURCES = cgexec.c tools-common.c tools-common.h
 cgexec_LIBS = $(CODE_COVERAGE_LIBS)
 cgexec_CFLAGS = $(CODE_COVERAGE_CFLAGS)

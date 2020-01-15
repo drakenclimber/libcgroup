@@ -8,6 +8,7 @@
 #include <getopt.h>
 
 #include "abstraction-common.h"
+#include "../tools/tools-common.h"
 
 #define CGGET "cgget"
 
@@ -200,12 +201,17 @@ int main(int argc, char *argv[])
 	if (result)
 		goto err;
 
-	fprintf(stdout, "cgget");
-	for (int i = 0; i < cgget_argc; i++)
+	int i;
+	fprintf(stdout, "cgget argc = %d\n", cgget_argc);
+	//fprintf(stdout, "cgget");
+	for (i = 0; i < cgget_argc; i++)
 		fprintf(stdout, " %s", cgget_argv[i]);
 	fprintf(stdout, "\n");
 
-	result = execvp(CGGET, cgget_argv);
+	/* reset the getopt index back to the start */
+	optind = 0;
+	result = cgget_main(cgget_argc, cgget_argv, NULL, NULL, &i);
+	//result = execvp(CGGET, cgget_argv);
 err:
 	return (result < 0) ? -result : result;
 }

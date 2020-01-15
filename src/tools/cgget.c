@@ -292,8 +292,8 @@ int add_record_to_buffer(char **buffer, char *record, int capacity)
 	return 1;
 }
 
-
-int main(int argc, char *argv[])
+int cgget_main(int argc, char *argv[], char *settings[], char *values[],
+	       int *len)
 {
 	int ret = 0;
 	int result = 0;
@@ -447,6 +447,12 @@ int main(int argc, char *argv[])
 			argv[i], names, mode, argv[0]);
 	}
 
+	i = 0;
+	while (names[i] != 0) {
+		fprintf(stderr, "names[%d] = %s\n", i, names[i]);
+		i++;
+	}
+
 err:
 	for (i = 0; i < capacity; i++) {
 		if (cgroup_list[i])
@@ -463,4 +469,19 @@ err_free:
 	free(names);
 
 	return result;
+}
+
+int main(int argc, char *argv[])
+{
+	int len;
+
+	fprintf(stdout, "cgget argc = %d\n", argc);
+	len = 0;
+	while (len < argc) {
+		fprintf(stdout, " %s", argv[len]);
+		len++;
+	}
+	fprintf(stdout, "\n");
+
+	return cgget_main(argc, argv, NULL, NULL, &len);
 }
