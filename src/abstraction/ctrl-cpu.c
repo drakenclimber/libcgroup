@@ -3,29 +3,39 @@
 
 #include <string.h>
 
+#include "abstraction-common.h"
+
 static const char * const cpu_shares = "cpu.shares";
+static const char * const cpu_weight = "cpu.weight";
 
-static int v2_weight_to_v1(const char * const prev_setting,
-			   char *new_settings[])
+static int v1_shares_to_v2(struct cgroup_name_map * const map)
 {
-	new_settings[0] = strdup(cpu_shares);
-	if (new_settings[0] == NULL)
-		return ECGINVAL;
-
-	return 0;
+	// TODO - convert map->prev_value to shares
+	return cgroup_map_insert_new_name(map, cpu_weight, map->prev_value);
 }
 
-int cpu_v1_to_v2(const char * const prev_setting, char *new_settings[])
+static int v2_weight_to_v1(struct cgroup_name_map * const map)
 {
-	return ECGFAIL;
+	// TODO - convert map->prev_value to weight
+	return cgroup_map_insert_new_name(map, cpu_shares, map->prev_value);
 }
 
-int cpu_v2_to_v1(const char * const prev_setting, char *new_settings[])
+int cgroup_cpu_v1_to_v2(struct cgroup_name_map * const map)
 {
 	int ret = ECGFAIL;
 
-	if (strcmp(prev_setting, "cpu.weight") == 0)
-		ret = v2_weight_to_v1(prev_setting, new_settings);
+	if (strcmp(map->prev_name, cpu_shares) == 0)
+		ret = v1_shares_to_v2(map);
+
+	return ret;
+}
+
+int cgroup_cpu_v2_to_v1(struct cgroup_name_map * const map)
+{
+	int ret = ECGFAIL;
+
+	if (strcmp(map->prev_name, cpu_weight) == 0)
+		ret = v2_weight_to_v1(map);
 
 	return ret;
 }

@@ -87,7 +87,8 @@ static int parse_abstract_opts(int argc, char *argv[],
 }
 
 static int process_r_flag(int * const argc, char ***argv,
-			  const char * const in_name)
+			  const char * const in_name,
+			  enum cg_version_t version)
 {
 	struct cgroup_name_map map = {0};
 	int i, ret = 0;
@@ -101,6 +102,7 @@ static int process_r_flag(int * const argc, char ***argv,
 	if (map.prev_name == NULL)
 		return ECGOTHER;
 
+	map.prev_version = version;
 	map.prev_value = NULL;
 
 	ret = cgroup_map_convert_name(&map);
@@ -165,7 +167,8 @@ static int parse_cgget_opts(int argc, char *argv[],
 			break;
 
 		case 'r':
-			ret = process_r_flag(cgget_argc, cgget_argv, optarg);
+			ret = process_r_flag(cgget_argc, cgget_argv, optarg,
+					     args_version);
 			if (ret)
 				goto err;
 			break;

@@ -8,12 +8,12 @@
 
 #include "abstraction-common.h"
 
-static int get_controller_from_setting(const char * const setting,
-				       char **controller)
+static int get_controller_from_name(const char * const name,
+				    char **controller)
 {
 	char *dot;
 
-	*controller = strdup(setting);
+	*controller = strdup(name);
 	if (*controller == NULL)
 		return ECGOTHER;
 
@@ -26,14 +26,36 @@ static int get_controller_from_setting(const char * const setting,
 	return 0;
 }
 
-static int convert_v1_to_v2(const char * const controller,
-			    const char * const prev_setting,
-			    char *new_settings[])
+static int get_value_from_name(const char * const name, char **value)
+{
+	char *copy = strdup(name);
+	char *tok, *saveptr = NULL;
+	int ret = 0;
+
+	tok = strtok_r(copy, "=", &saveptr);
+	if (tok == NULL) {
+		/* The name string doesn't contain a value */
+		*value = NULL;
+		ret = 0;
+		goto out;
+	}
+
+	*value = strdup(tok);
+	fprintf(stdout, "%s: value = %s\n", __func__, *value);
+
+out:
+	if (copy)
+		free(copy);
+
+	return ret;
+}
+
+static int convert_v1_to_v2(struct cgroup_name_map * const map)
 {
 	int ret = 0;
 
-	if (strcmp(controller, "cpu") == 0)
-		ret = cpu_v1_to_v2(prev_setting, new_settings);
+	if (strcmp(map->controller, "cpu") == 0)
+		ret = cgroup_cpu_v1_to_v2(map);
 	else
 		/* currently unsupported controller */
 		ret = ECGINVAL;
@@ -41,14 +63,12 @@ static int convert_v1_to_v2(const char * const controller,
 	return ret;
 }
 
-static int convert_v2_to_v1(const char * const controller,
-			    const char * const prev_setting,
-			    char *new_settings[])
+static int convert_v2_to_v1(struct cgroup_name_map * const map)
 {
 	int ret = 0;
 
-	if (strcmp(controller, "cpu") == 0)
-		ret = cpu_v2_to_v1(prev_setting, new_settings);
+	if (strcmp(map->controller, "cpu") == 0)
+		ret = cgroup_cpu_v2_to_v1(map);
 	else
 		/* currently unsupported controller */
 		ret = ECGINVAL;
@@ -56,71 +76,57 @@ static int convert_v2_to_v1(const char * const controller,
 	return ret;
 }
 
-int cgroup_convert_setting(enum cg_version_t in_version,
-			   const char * const prev_setting,
-			   char *new_settings[])
+int cgroup_map_convert_name(struct cgroup_name_map * const map)
 {
 	enum cg_version_t ctrl_version;
-	char *controller;
 	int ret = 0;
-	int new_settings_idx = 0;
 
-	ret = get_controller_from_setting(prev_setting,	&controller);
+	ret = get_controller_from_name(map->prev_name, &map->controller);
 	if (ret)
 		goto err;
 
-	ret = cgroup_get_controller_version(controller, &ctrl_version);
+	ret = get_value_from_name(map->prev_name, &map->prev_value);
 	if (ret)
 		goto err;
-	fprintf(stdout, "controller %s version = %d\n", controller, ctrl_version);
 
-	if (ctrl_version == in_version) {
+	ret = cgroup_get_controller_version(map->controller, &ctrl_version);
+	if (ret)
+		goto err;
+	fprintf(stdout, "controller %s version = %d\n", map->controller, ctrl_version);
+
+	if (ctrl_version == map->prev_version) {
 		/* No conversion necessary.  Use the setting as is */
-		new_settings[new_settings_idx] = strdup(prev_setting);
-		fprintf(stdout, "yo\n");
-		if (new_settings[new_settings_idx] == NULL) {
-			ret = ECGFAIL;
-		}
-		new_settings_idx++;
+		ret = cgroup_map_insert_new_name(map, map->prev_name,
+						 map->prev_value);
+		if (ret)
+			goto err;
 	} else {
 		/* We need to convert from one version to another */
-		switch (in_version) {
+		switch (map->prev_version) {
 		case CGROUP_UNK:
 			break;
 		case CGROUP_V1:
-			if (ctrl_version == CGROUP_V2) {
-				ret = convert_v1_to_v2(controller,
-						       prev_setting,
-						       new_settings);
-				if (ret)
-					goto err;
-			}
+			ret = convert_v1_to_v2(map);
+			if (ret)
+				goto err;
 			break;
 		case CGROUP_V2:
-			if (ctrl_version == CGROUP_V1) {
-				ret = convert_v2_to_v1(controller,
-						       prev_setting,
-						       new_settings);
-				if (ret)
-					goto err;
-			}
+			ret = convert_v2_to_v1(map);
+			if (ret)
+				goto err;
 			break;
 		default:
 			cgroup_err("Unsupported cgroup version: %d\n",
-				   in_version);
+				   map->prev_version);
 			goto err;
 		}
 	}
 
 err:
-	if (controller)
-		free(controller);
-
-	fprintf(stdout, "yo2\n");
 	return ret;
 }
 
-int cgroup_map_delete_new(struct cgroup_name_map * const map)
+int cgroup_map_free_new(struct cgroup_name_map * const map)
 {
 	int i;
 
@@ -133,6 +139,20 @@ int cgroup_map_delete_new(struct cgroup_name_map * const map)
 
 	map->new_len = 0;
 	return 0;
+}
+
+int cgroup_map_free(struct cgroup_name_map * const map)
+{
+	int ret;
+
+	if (map->prev_name != NULL)
+		free(map->prev_name);
+	if (map->prev_value != NULL)
+		free(map->prev_value);
+
+	ret = cgroup_map_free_new(map);
+
+	return ret;
 }
 
 int cgroup_map_insert_new_name(struct cgroup_name_map * const map,
@@ -180,16 +200,7 @@ delete_new:
 	/* one of the reallocs failed.  delete both arrays and reset the
 	 * length to zero
 	 */
-	cgroup_map_delete_new(map);
-	return ret;
-}
-
-int cgroup_map_convert_name(struct cgroup_name_map * const map)
-{
-	int ret;
-
-	ret = cgroup_map_insert_new_name(map, map->prev_name, map->prev_value);
-
+	cgroup_map_free_new(map);
 	return ret;
 }
 
