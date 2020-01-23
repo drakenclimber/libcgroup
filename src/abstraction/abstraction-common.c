@@ -119,3 +119,92 @@ err:
 	fprintf(stdout, "yo2\n");
 	return ret;
 }
+
+int cgroup_map_delete_new(struct cgroup_name_map * const map)
+{
+	int i;
+
+	for (i = 0; i < map->new_len; i++) {
+		if (map->new_names[i] != NULL)
+			free(map->new_names[i]);
+		if (map->new_values[i] != NULL)
+			free(map->new_values[i]);
+	}
+
+	map->new_len = 0;
+	return 0;
+}
+
+int cgroup_map_insert_new_name(struct cgroup_name_map * const map,
+			       const char * const new_name,
+			       const char * const new_value)
+{
+	int ret;
+
+	map->new_names = reallocarray(map->new_names, sizeof(char *),
+				      map->new_len + 1);
+	if (map->new_names == NULL) {
+		ret = ECGOTHER;
+		goto delete_new;
+	}
+
+	map->new_values = reallocarray(map->new_values, sizeof(char *),
+				       map->new_len + 1);
+	if (map->new_values == NULL) {
+		ret = ECGOTHER;
+		goto delete_new;
+	}
+
+	map->new_names[map->new_len] = NULL;
+	if (new_name) {
+		map->new_names[map->new_len] = strdup(new_name);
+		if (map->new_names[map->new_len] == NULL) {
+			ret = ECGOTHER;
+			goto delete_new;
+		}
+	}
+
+	map->new_values[map->new_len] = NULL;
+	if (new_value) {
+		map->new_values[map->new_len] = strdup(new_value);
+		if (map->new_values[map->new_len] == NULL) {
+			ret = ECGOTHER;
+			goto delete_new;
+		}
+	}
+
+	map->new_len++;
+	return 0;
+
+delete_new:
+	/* one of the reallocs failed.  delete both arrays and reset the
+	 * length to zero
+	 */
+	cgroup_map_delete_new(map);
+	return ret;
+}
+
+int cgroup_map_convert_name(struct cgroup_name_map * const map)
+{
+	int ret;
+
+	ret = cgroup_map_insert_new_name(map, map->prev_name, map->prev_value);
+
+	return ret;
+}
+
+int cgroup_append_to_argv(int * const argc, char ***argv,
+			  const char * const new_arg)
+{
+	(*argv) = reallocarray((*argv), sizeof(char *), (*argc) + 1);
+	if (*argv == NULL)
+		return ECGOTHER;
+
+	(*argv)[*argc] = strdup(new_arg);
+	if ((*argv)[*argc] == NULL)
+		return ECGOTHER;
+
+	(*argc)++;
+
+	return 0;
+}

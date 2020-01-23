@@ -86,17 +86,56 @@ static int parse_abstract_opts(int argc, char *argv[],
 	return 0;
 }
 
+static int process_r_flag(int * const argc, char ***argv,
+			  const char * const in_name)
+{
+	struct cgroup_name_map map = {0};
+	int i, ret = 0;
+
+	if (in_name == NULL) {
+		usage(CGGET);
+		return ECGFAIL;
+	}
+
+	map.prev_name = strdup(in_name);
+	if (map.prev_name == NULL)
+		return ECGOTHER;
+
+	map.prev_value = NULL;
+
+	ret = cgroup_map_convert_name(&map);
+	if (ret)
+		goto out;
+
+	for (i = 0; i < map.new_len; i++) {
+		ret = cgroup_append_to_argv(argc, argv, "-r");
+		if (ret)
+			goto out;
+
+		ret = cgroup_append_to_argv(argc, argv, map.new_names[i]);
+		if (ret)
+			goto out;
+	}
+
+out:
+	if (map.prev_name != NULL)
+		free(map.prev_name);
+	if (map.prev_value != NULL)
+		free(map.prev_value);
+
+	return ret;
+}
 
 static int parse_cgget_opts(int argc, char *argv[],
-			    int * const cgget_argc, char *cgget_argv[],
+			    int * const cgget_argc, char ***cgget_argv,
 			    enum cg_version_t args_version)
 {
-	char *new_settings[MAX_NEW_SETTINGS] = { '\0' };
+	int c, ret;
 	char *tmp;
-	int c, i, ret;
 
-	cgget_argv[*cgget_argc] = CGGET;
-	(*cgget_argc)++;
+	ret = cgroup_append_to_argv(cgget_argc, cgget_argv, CGGET);
+	if (ret)
+		goto err;
 
 	/* Rebuild the options list without our parameters in it */
 	while ((c = getopt_long(argc, argv, "r:hnvg:a12", long_options,
@@ -111,41 +150,24 @@ static int parse_cgget_opts(int argc, char *argv[],
 			tmp[0] = '-';
 			tmp[1] = c;
 			tmp[2] = '\0';
-			cgget_argv[*cgget_argc] = tmp;
-			(*cgget_argc)++;
+			ret = cgroup_append_to_argv(cgget_argc, cgget_argv,
+						    tmp);
+			if (ret)
+				goto err;
 
 			if (optarg) {
-				cgget_argv[*cgget_argc] = optarg;
-				(*cgget_argc)++;
+				ret = cgroup_append_to_argv(cgget_argc,
+							    cgget_argv,
+							    optarg);
+				if (ret)
+					goto err;
 			}
 			break;
 
 		case 'r':
-			if (optarg == NULL) {
-				usage(argv[0]);
-				return 1;
-			}
-
-			ret = cgroup_convert_setting(args_version, optarg,
-						     new_settings);
+			ret = process_r_flag(cgget_argc, cgget_argv, optarg);
 			if (ret)
 				goto err;
-
-			i = 0;
-			while(new_settings[i] != NULL) {
-				fprintf(stdout, "newstng[%d] = %s\n", i, new_settings[i]);
-				cgget_argv[*cgget_argc] = strdup("-r");
-				if (!cgget_argv[*cgget_argc]) {
-					ret = ECGOTHER;
-					goto err;
-				}
-				(*cgget_argc)++;
-
-				cgget_argv[*cgget_argc] = strdup(new_settings[i]);
-				(*cgget_argc)++;
-
-				i++;
-			}
 			break;
 
 		default:
@@ -155,18 +177,15 @@ static int parse_cgget_opts(int argc, char *argv[],
 
 	/* append any non-getopt parameters */
 	while(argv[optind] != NULL) {
-		cgget_argv[*cgget_argc] = argv[optind];
-		(*cgget_argc)++;
+		ret = cgroup_append_to_argv(cgget_argc, cgget_argv,
+					    argv[optind]);
+		if (ret)
+			goto err;
 
 		optind++;
 	}
-err:
-	i = 0;
-	while(new_settings[i] != NULL) {
-		free(new_settings[i]);
-		i++;
-	}
 
+err:
 	return ret;
 }
 
@@ -174,10 +193,8 @@ int main(int argc, char *argv[])
 {
 	enum cg_version_t version;
 	int result = 0;
-	// TODO - should this move to parse_cgget_opts()?
 	int cgget_argc = 0;
-	// TODO - make this hardcoded limit more robust and not hardcoded :)
-	char *cgget_argv[100] = {0};
+	char **cgget_argv = NULL;
 
 	if (argc < 2) {
 		usage(argv[0]);
@@ -196,22 +213,21 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
-	result = parse_cgget_opts(argc, argv, &cgget_argc, cgget_argv,
+	result = parse_cgget_opts(argc, argv, &cgget_argc, &cgget_argv,
 				  version);
 	if (result)
 		goto err;
 
 	int i;
 	fprintf(stdout, "cgget argc = %d\n", cgget_argc);
-	//fprintf(stdout, "cgget");
-	for (i = 0; i < cgget_argc; i++)
+	fprintf(stdout, "cgget");
+	for (i = 1; i < cgget_argc; i++)
 		fprintf(stdout, " %s", cgget_argv[i]);
 	fprintf(stdout, "\n");
 
 	/* reset the getopt index back to the start */
 	optind = 0;
 	result = cgget_main(cgget_argc, cgget_argv, NULL, NULL, &i);
-	//result = execvp(CGGET, cgget_argv);
 err:
 	return (result < 0) ? -result : result;
 }
