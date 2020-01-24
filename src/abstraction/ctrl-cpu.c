@@ -11,20 +11,22 @@ static const char * const cpu_weight = "cpu.weight";
 static int v1_shares_to_v2(struct cgroup_name_map * const map)
 {
 	// TODO - convert map->prev_value to shares
-	return cgroup_map_insert_disk_name(map, cpu_weight, map->cgx_value);
+	//return cgroup_map_insert_disk_name(map, cpu_weight, map->cgx_value);
+	return 0;
 }
 
 static int v2_weight_to_v1(struct cgroup_name_map * const map)
 {
 	// TODO - convert map->prev_value to weight
-	return cgroup_map_insert_disk_name(map, cpu_shares, map->cgx_value);
+	//return cgroup_map_insert_disk_name(map, cpu_shares, map->cgx_value);
+	return 0;
 }
 
 int cgroup_cpu_v1_to_v2(struct cgroup_name_map * const map)
 {
 	int ret = ECGFAIL;
 
-	if (strcmp(map->cgx_name, cpu_shares) == 0)
+	if (strcmp(map->cgx_names[0], cpu_shares) == 0)
 		ret = v1_shares_to_v2(map);
 
 	return ret;
@@ -34,7 +36,7 @@ int cgroup_cpu_v2_to_v1(struct cgroup_name_map * const map)
 {
 	int ret = ECGFAIL;
 
-	if (strcmp(map->cgx_name, cpu_weight) == 0)
+	if (strcmp(map->cgx_names[0], cpu_weight) == 0)
 		ret = v2_weight_to_v1(map);
 
 	return ret;

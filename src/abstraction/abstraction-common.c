@@ -76,49 +76,56 @@ static int convert_v2_to_v1(struct cgroup_name_map * const map)
 	return ret;
 }
 
-int cgroup_map_convert_name(struct cgroup_name_map * const map)
+int cgroup_map_convert(struct cgroup_name_map * const map)
 {
 	enum cg_version_t ctrl_version;
-	int ret = 0;
+	char *controller;
+	int i, ret = 0;
 
-	ret = get_controller_from_name(map->cgx_name, &map->controller);
-	if (ret)
-		goto err;
-
-	ret = get_value_from_name(map->cgx_name, &map->cgx_value);
-	if (ret)
-		goto err;
-
-	ret = cgroup_get_controller_version(map->controller, &ctrl_version);
-	if (ret)
-		goto err;
-	fprintf(stdout, "controller %s version = %d\n", map->controller, ctrl_version);
-
-	if (ctrl_version == map->cgx_version) {
-		/* No conversion necessary.  Use the setting as is */
-		ret = cgroup_map_insert_disk_name(map, map->cgx_name,
-						  map->cgx_value);
+	for (i = 0; i < map->cgx_len; i++) {
+		ret = get_controller_from_name(map->cgx_names[i], &controller);
 		if (ret)
 			goto err;
-	} else {
-		/* We need to convert from one version to another */
-		switch (map->cgx_version) {
-		case CGROUP_UNK:
-			break;
-		case CGROUP_V1:
-			ret = convert_v1_to_v2(map);
-			if (ret)
-				goto err;
-			break;
-		case CGROUP_V2:
-			ret = convert_v2_to_v1(map);
-			if (ret)
-				goto err;
-			break;
-		default:
-			cgroup_err("Unsupported cgroup version: %d\n",
-				   map->cgx_version);
+
+		ret = get_value_from_name(map->cgx_names[i],
+					  &map->cgx_values[i]);
+		if (ret)
 			goto err;
+
+
+		ret = cgroup_get_controller_version(controller,
+						    &ctrl_version);
+		if (ret)
+			goto err;
+
+		if (ctrl_version == map->cgx_version) {
+			/* No conversion necessary.  Use the setting as is */
+			ret = cgroup_map_insert_disk_name_value(
+				map, map->cgx_names[i], map->cgx_values[i]);
+			if (ret)
+				goto err;
+		} else {
+			/* We need to convert from one version to another */
+			switch (map->cgx_version) {
+			case CGROUP_UNK:
+				cgroup_err("Unknown cgroup version: %d\n",
+					   map->cgx_version);
+				break;
+			case CGROUP_V1:
+				ret = convert_v1_to_v2(map);
+				if (ret)
+					goto err;
+				break;
+			case CGROUP_V2:
+				ret = convert_v2_to_v1(map);
+				if (ret)
+					goto err;
+				break;
+			default:
+				cgroup_err("Unsupported cgroup version: %d\n",
+					   map->cgx_version);
+				goto err;
+			}
 		}
 	}
 
@@ -126,7 +133,22 @@ err:
 	return ret;
 }
 
-int cgroup_map_free_new(struct cgroup_name_map * const map)
+int cgroup_map_free_cgx(struct cgroup_name_map * const map)
+{
+	int i;
+
+	for (i = 0; i < map->cgx_len; i++) {
+		if (map->cgx_names[i] != NULL)
+			free(map->cgx_names[i]);
+		if (map->cgx_values[i] != NULL)
+			free(map->cgx_values[i]);
+	}
+
+	map->cgx_len = 0;
+	return 0;
+}
+
+int cgroup_map_free_disk(struct cgroup_name_map * const map)
 {
 	int i;
 
@@ -145,19 +167,69 @@ int cgroup_map_free(struct cgroup_name_map * const map)
 {
 	int ret;
 
-	if (map->cgx_name != NULL)
-		free(map->cgx_name);
-	if (map->cgx_value != NULL)
-		free(map->cgx_value);
+	if (map->cgx_names != NULL)
+		free(map->cgx_names);
+	if (map->cgx_values != NULL)
+		free(map->cgx_values);
 
-	ret = cgroup_map_free_new(map);
+	ret = cgroup_map_free_cgx(map);
+	ret = cgroup_map_free_disk(map);
 
 	return ret;
 }
 
-int cgroup_map_insert_disk_name(struct cgroup_name_map * const map,
-			        const char * const disk_name,
-			        const char * const disk_value)
+int cgroup_map_insert_cgx_name_value(struct cgroup_name_map * const map,
+				     const char * const cgx_name,
+				     const char * const cgx_value)
+{
+	int ret;
+
+	map->cgx_names = reallocarray(map->cgx_names, sizeof(char *),
+				      map->cgx_len + 1);
+	if (map->cgx_names == NULL) {
+		ret = ECGOTHER;
+		goto delete_cgx;
+	}
+
+	map->cgx_values = reallocarray(map->cgx_values, sizeof(char *),
+				       map->cgx_len + 1);
+	if (map->cgx_values == NULL) {
+		ret = ECGOTHER;
+		goto delete_cgx;
+	}
+
+	map->cgx_names[map->cgx_len] = NULL;
+	if (cgx_name) {
+		map->cgx_names[map->cgx_len] = strdup(cgx_name);
+		if (map->cgx_names[map->cgx_len] == NULL) {
+			ret = ECGOTHER;
+			goto delete_cgx;
+		}
+	}
+
+	map->cgx_values[map->cgx_len] = NULL;
+	if (cgx_value) {
+		map->cgx_values[map->cgx_len] = strdup(cgx_value);
+		if (map->cgx_values[map->cgx_len] == NULL) {
+			ret = ECGOTHER;
+			goto delete_cgx;
+		}
+	}
+
+	map->cgx_len++;
+	return 0;
+
+delete_cgx:
+	/* one of the reallocs failed.  delete both arrays and reset the
+	 * length to zero
+	 */
+	cgroup_map_free_cgx(map);
+	return ret;
+}
+
+int cgroup_map_insert_disk_name_value(struct cgroup_name_map * const map,
+				      const char * const disk_name,
+				      const char * const disk_value)
 {
 	int ret;
 
@@ -165,14 +237,14 @@ int cgroup_map_insert_disk_name(struct cgroup_name_map * const map,
 				      map->disk_len + 1);
 	if (map->disk_names == NULL) {
 		ret = ECGOTHER;
-		goto delete_new;
+		goto delete_disk;
 	}
 
 	map->disk_values = reallocarray(map->disk_values, sizeof(char *),
 				        map->disk_len + 1);
 	if (map->disk_values == NULL) {
 		ret = ECGOTHER;
-		goto delete_new;
+		goto delete_disk;
 	}
 
 	map->disk_names[map->disk_len] = NULL;
@@ -180,7 +252,7 @@ int cgroup_map_insert_disk_name(struct cgroup_name_map * const map,
 		map->disk_names[map->disk_len] = strdup(disk_name);
 		if (map->disk_names[map->disk_len] == NULL) {
 			ret = ECGOTHER;
-			goto delete_new;
+			goto delete_disk;
 		}
 	}
 
@@ -189,18 +261,18 @@ int cgroup_map_insert_disk_name(struct cgroup_name_map * const map,
 		map->disk_values[map->disk_len] = strdup(disk_value);
 		if (map->disk_values[map->disk_len] == NULL) {
 			ret = ECGOTHER;
-			goto delete_new;
+			goto delete_disk;
 		}
 	}
 
 	map->disk_len++;
 	return 0;
 
-delete_new:
+delete_disk:
 	/* one of the reallocs failed.  delete both arrays and reset the
 	 * length to zero
 	 */
-	cgroup_map_free_new(map);
+	cgroup_map_free_disk(map);
 	return ret;
 }
 

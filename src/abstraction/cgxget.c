@@ -86,22 +86,22 @@ static int parse_abstract_opts(int argc, char *argv[],
 	return 0;
 }
 
-static int process_r_flag(int * const argc, char ***argv,
-			  const char * const in_name,
-			  enum cg_version_t version)
+static int process_r_flag(struct cgroup_name_map * const map,
+			  const char * const in_name)
 {
-	struct cgroup_name_map map = {0};
-	int i, ret = 0;
+	int ret = 0;
 
 	if (in_name == NULL) {
 		usage(CGGET);
 		return ECGFAIL;
 	}
 
-	map.cgx_name = strdup(in_name);
-	if (map.cgx_name == NULL)
+	/* We will extract the values field later */
+	ret = cgroup_map_insert_cgx_name_value(map, in_name, NULL);
+	if (ret)
 		return ECGOTHER;
 
+#if 0
 	map.cgx_version = version;
 	map.cgx_value = NULL;
 
@@ -120,6 +120,7 @@ static int process_r_flag(int * const argc, char ***argv,
 	}
 
 out:
+#endif
 	return ret;
 }
 
@@ -127,6 +128,7 @@ static int parse_cgget_opts(int argc, char *argv[],
 			    int * const cgget_argc, char ***cgget_argv,
 			    enum cg_version_t args_version)
 {
+	struct cgroup_name_map map = {0};
 	int c, ret;
 	char *tmp;
 
@@ -162,8 +164,7 @@ static int parse_cgget_opts(int argc, char *argv[],
 			break;
 
 		case 'r':
-			ret = process_r_flag(cgget_argc, cgget_argv, optarg,
-					     args_version);
+			ret = process_r_flag(&map, optarg);
 			if (ret)
 				goto err;
 			break;
