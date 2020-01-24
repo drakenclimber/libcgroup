@@ -6,8 +6,6 @@
 #include "../libcgroup-internal.h"
 
 struct cgroup_name_map {
-	char *controller;
-
 	/* The cgx_* fields contain the name/value pairs of cgroup settings
 	 * as requested by the user.  The cgx* tools should respond in the
 	 * same cgroup format that the user made the request in.
@@ -29,10 +27,10 @@ struct cgroup_name_map {
 int cgroup_append_to_argv(int * const argc, char ***argv,
 			  const char * const new_arg);
 
-int cgroup_map_convert_name(struct cgroup_name_map * const map);
-int cgroup_map_free_cgx(struct cgroup_name_map * const map);
-int cgroup_map_free_disk(struct cgroup_name_map * const map);
-int cgroup_map_free(struct cgroup_name_map * const map);
+int cgroup_map_convert(struct cgroup_name_map * const map);
+void cgroup_map_free_cgx(struct cgroup_name_map * const map);
+void cgroup_map_free_disk(struct cgroup_name_map * const map);
+void cgroup_map_free(struct cgroup_name_map * const map);
 int cgroup_map_insert_cgx_name_value(struct cgroup_name_map * const map,
 				     const char * const cgx_name,
 				     const char * const cgx_value);
@@ -41,7 +39,7 @@ int cgroup_map_insert_disk_name_value(struct cgroup_name_map * const map,
 				      const char * const disk_value);
 
 /* ctrl-cpu.c functions */
-int cgroup_cpu_v1_to_v2(struct cgroup_name_map * const map);
-int cgroup_cpu_v2_to_v1(struct cgroup_name_map * const map);
+int cgroup_cpu_convert(struct cgroup_name_map * const map,
+		       enum cg_version_t ctrl_version);
 
 #endif /* __ABSTRACTION_COMMON */

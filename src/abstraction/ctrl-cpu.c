@@ -1,43 +1,170 @@
 #include <libcgroup.h>
 #include <libcgroup-internal.h>
 
+#include <errno.h>
+#include <limits.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "abstraction-common.h"
 
+#define DEFAULT_SHARES_VALUE 1024
+#define DEFAULT_WEIGHT_VALUE 100
+
 static const char * const cpu_shares = "cpu.shares";
 static const char * const cpu_weight = "cpu.weight";
 
-static int v1_shares_to_v2(struct cgroup_name_map * const map)
+static int v1_shares_to_v2(struct cgroup_name_map * const map,
+			   const char * const shares_value)
 {
-	// TODO - convert map->prev_value to shares
-	//return cgroup_map_insert_disk_name(map, cpu_weight, map->cgx_value);
-	return 0;
-}
+#define WEIGHT_STR_LEN 20
 
-static int v2_weight_to_v1(struct cgroup_name_map * const map)
-{
-	// TODO - convert map->prev_value to weight
-	//return cgroup_map_insert_disk_name(map, cpu_shares, map->cgx_value);
-	return 0;
-}
+	long int weight;
+	char *endptr, *weight_str = NULL;
+	int ret = 0;
 
-int cgroup_cpu_v1_to_v2(struct cgroup_name_map * const map)
-{
-	int ret = ECGFAIL;
+	if (shares_value) {
+		weight = strtol(shares_value, &endptr, 10);
 
-	if (strcmp(map->cgx_names[0], cpu_shares) == 0)
-		ret = v1_shares_to_v2(map);
+		/* taken directly from strtol's man page */
+		if ((errno == ERANGE &&
+		     (weight == LONG_MAX || weight == LONG_MIN))
+		    || (errno != 0 && weight == 0)) {
+			cgroup_err("Error: Failed to parse cpu.shares value: %s\n",
+				   shares_value);
+			ret = ECGFAIL;
+			goto out;
+		}
+
+		if (endptr == shares_value) {
+			cgroup_err("Error: No value found in cpu.shares value %s\n",
+				   shares_value);
+			ret = ECGFAIL;
+			goto out;
+		}
+
+		/* now scale from cpu.shares to cpu.weight */
+		weight = weight * DEFAULT_WEIGHT_VALUE / DEFAULT_SHARES_VALUE;
+
+		weight_str = calloc(sizeof(char), WEIGHT_STR_LEN);
+		ret = snprintf(weight_str, WEIGHT_STR_LEN, "%ld\n", weight);
+		if (ret == WEIGHT_STR_LEN) {
+			/* we ran out of room in the string. throw an error */
+			cgroup_err("Error: weight too large for string: %d\n",
+				   weight);
+			ret = ECGFAIL;
+			goto out;
+		}
+	}
+
+	ret = cgroup_map_insert_disk_name_value(map, cpu_weight, weight_str);
+
+out:
+	if (weight_str)
+		free(weight_str);
 
 	return ret;
 }
 
-int cgroup_cpu_v2_to_v1(struct cgroup_name_map * const map)
+static int v2_weight_to_v1(struct cgroup_name_map * const map,
+			   const char * const weight_value)
 {
-	int ret = ECGFAIL;
+#define SHARES_STR_LEN 20
 
-	if (strcmp(map->cgx_names[0], cpu_weight) == 0)
-		ret = v2_weight_to_v1(map);
+	long int shares;
+	char *endptr, *shares_str = NULL;
+	int ret = 0;
+
+	if (weight_value) {
+		shares = strtol(weight_value, &endptr, 10);
+
+		/* taken directly from strtol's man page */
+		if ((errno == ERANGE &&
+		     (shares == LONG_MAX || shares == LONG_MIN))
+		    || (errno != 0 && shares == 0)) {
+			cgroup_err("Error: Failed to parse cpu.weight value: %s\n",
+				   weight_value);
+			ret = ECGFAIL;
+			goto out;
+		}
+
+		if (endptr == weight_value) {
+			cgroup_err("Error: No value found in cpu.weight value %s\n",
+				   weight_value);
+			ret = ECGFAIL;
+			goto out;
+		}
+
+		/* now scale from cpu.shares to cpu.weight */
+		shares = shares * DEFAULT_SHARES_VALUE / DEFAULT_WEIGHT_VALUE;
+
+		shares_str = calloc(sizeof(char), SHARES_STR_LEN);
+		ret = snprintf(shares_str, SHARES_STR_LEN, "%ld\n", shares);
+		if (ret == SHARES_STR_LEN) {
+			/* we ran out of room in the string. throw an error */
+			cgroup_err("Error: shares too large for string: %d\n",
+				   shares);
+			ret = ECGFAIL;
+			goto out;
+		}
+	}
+
+	ret = cgroup_map_insert_disk_name_value(map, cpu_shares, shares_str);
+
+out:
+	if (shares_str)
+		free(shares_str);
 
 	return ret;
+}
+
+static int v1_to_v2(struct cgroup_name_map * const map)
+{
+	int i, ret = ECGFAIL;
+
+	/* At this time, I believe cpu cgroup v1 settings have a one-to-one
+	 * mapping to cpu cgroup v2 settings.  If/When this no longer becomes
+	 * the case, we can make this function smarter.
+	 */
+	for (i = 0; i < map->cgx_len; i++) {
+		if (strcmp(map->cgx_names[i], cpu_shares) == 0)
+			ret = v1_shares_to_v2(map, map->cgx_values[i]);
+		if (ret)
+			goto out;
+	}
+
+out:
+	return ret;
+}
+
+static int v2_to_v1(struct cgroup_name_map * const map)
+{
+	int i, ret = ECGFAIL;
+
+	/* At this time, I believe cpu cgroup v1 settings have a one-to-one
+	 * mapping to cpu cgroup v2 settings.  If/When this no longer becomes
+	 * the case, we can make this function smarter.
+	 */
+	for (i = 0; i < map->cgx_len; i++) {
+		if (strcmp(map->cgx_names[i], cpu_weight) == 0)
+			ret = v2_weight_to_v1(map, map->cgx_values[i]);
+		if (ret)
+			goto out;
+	}
+
+out:
+	return ret;
+}
+
+int cgroup_cpu_convert(struct cgroup_name_map * const map,
+		       enum cg_version_t ctrl_version)
+{
+	switch (ctrl_version) {
+	case CGROUP_V1:
+		return v2_to_v1(map);
+	case CGROUP_V2:
+		return v1_to_v2(map);
+	default:
+		return ECGFAIL;
+	}
 }

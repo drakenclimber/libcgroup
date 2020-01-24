@@ -99,28 +99,8 @@ static int process_r_flag(struct cgroup_name_map * const map,
 	/* We will extract the values field later */
 	ret = cgroup_map_insert_cgx_name_value(map, in_name, NULL);
 	if (ret)
-		return ECGOTHER;
+		return ret;
 
-#if 0
-	map.cgx_version = version;
-	map.cgx_value = NULL;
-
-	ret = cgroup_map_convert_name(&map);
-	if (ret)
-		goto out;
-
-	for (i = 0; i < map.disk_len; i++) {
-		ret = cgroup_append_to_argv(argc, argv, "-r");
-		if (ret)
-			goto out;
-
-		ret = cgroup_append_to_argv(argc, argv, map.disk_names[i]);
-		if (ret)
-			goto out;
-	}
-
-out:
-#endif
 	return ret;
 }
 
@@ -129,7 +109,7 @@ static int parse_cgget_opts(int argc, char *argv[],
 			    enum cg_version_t args_version)
 {
 	struct cgroup_name_map map = {0};
-	int c, ret;
+	int c, i, ret;
 	char *tmp;
 
 	ret = cgroup_append_to_argv(cgget_argc, cgget_argv, CGGET);
@@ -174,6 +154,21 @@ static int parse_cgget_opts(int argc, char *argv[],
 		}
 	}
 
+	ret = cgroup_map_convert(&map);
+	if (ret)
+		goto err;
+
+	for (i = 0; i < map.disk_len; i++) {
+		ret = cgroup_append_to_argv(cgget_argc, cgget_argv, "-r");
+		if (ret)
+			goto err;
+
+		ret = cgroup_append_to_argv(cgget_argc, cgget_argv,
+					    map.disk_names[i]);
+		if (ret)
+			goto err;
+	}
+
 	/* append any non-getopt parameters */
 	while(argv[optind] != NULL) {
 		ret = cgroup_append_to_argv(cgget_argc, cgget_argv,
@@ -185,6 +180,7 @@ static int parse_cgget_opts(int argc, char *argv[],
 	}
 
 err:
+	cgroup_map_free(&map);
 	return ret;
 }
 

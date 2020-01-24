@@ -33,8 +33,8 @@ static int get_value_from_name(const char * const name, char **value)
 	int ret = 0;
 
 	tok = strtok_r(copy, "=", &saveptr);
-	if (tok == NULL) {
-		/* The name string doesn't contain a value */
+	if (strlen(tok) == strlen(copy)) {
+		/* The name string doesn't contain an =, thus no value */
 		*value = NULL;
 		ret = 0;
 		goto out;
@@ -50,34 +50,9 @@ out:
 	return ret;
 }
 
-static int convert_v1_to_v2(struct cgroup_name_map * const map)
-{
-	int ret = 0;
-
-	if (strcmp(map->controller, "cpu") == 0)
-		ret = cgroup_cpu_v1_to_v2(map);
-	else
-		/* currently unsupported controller */
-		ret = ECGINVAL;
-
-	return ret;
-}
-
-static int convert_v2_to_v1(struct cgroup_name_map * const map)
-{
-	int ret = 0;
-
-	if (strcmp(map->controller, "cpu") == 0)
-		ret = cgroup_cpu_v2_to_v1(map);
-	else
-		/* currently unsupported controller */
-		ret = ECGINVAL;
-
-	return ret;
-}
-
 int cgroup_map_convert(struct cgroup_name_map * const map)
 {
+	bool converted_cpu = false;
 	enum cg_version_t ctrl_version;
 	char *controller;
 	int i, ret = 0;
@@ -87,11 +62,13 @@ int cgroup_map_convert(struct cgroup_name_map * const map)
 		if (ret)
 			goto err;
 
-		ret = get_value_from_name(map->cgx_names[i],
-					  &map->cgx_values[i]);
-		if (ret)
-			goto err;
-
+		if (map->cgx_values[i] == NULL) {
+			/* attempt to extract the value from the name */
+			ret = get_value_from_name(map->cgx_names[i],
+						  &map->cgx_values[i]);
+			if (ret)
+				goto err;
+		}
 
 		ret = cgroup_get_controller_version(controller,
 						    &ctrl_version);
@@ -104,28 +81,19 @@ int cgroup_map_convert(struct cgroup_name_map * const map)
 				map, map->cgx_names[i], map->cgx_values[i]);
 			if (ret)
 				goto err;
-		} else {
-			/* We need to convert from one version to another */
-			switch (map->cgx_version) {
-			case CGROUP_UNK:
-				cgroup_err("Unknown cgroup version: %d\n",
-					   map->cgx_version);
-				break;
-			case CGROUP_V1:
-				ret = convert_v1_to_v2(map);
-				if (ret)
-					goto err;
-				break;
-			case CGROUP_V2:
-				ret = convert_v2_to_v1(map);
-				if (ret)
-					goto err;
-				break;
-			default:
-				cgroup_err("Unsupported cgroup version: %d\n",
-					   map->cgx_version);
+
+			/* no more processing is necessary on this name.  move
+			 * on to the next one
+			 */
+			continue;
+		}
+
+		/* the versions don't match.  we need to convert */
+		if (converted_cpu == false && strcmp(controller, "cpu") == 0) {
+			converted_cpu = true;
+			ret = cgroup_cpu_convert(map, ctrl_version);
+			if (ret)
 				goto err;
-			}
 		}
 	}
 
@@ -133,7 +101,7 @@ err:
 	return ret;
 }
 
-int cgroup_map_free_cgx(struct cgroup_name_map * const map)
+void cgroup_map_free_cgx(struct cgroup_name_map * const map)
 {
 	int i;
 
@@ -145,10 +113,9 @@ int cgroup_map_free_cgx(struct cgroup_name_map * const map)
 	}
 
 	map->cgx_len = 0;
-	return 0;
 }
 
-int cgroup_map_free_disk(struct cgroup_name_map * const map)
+void cgroup_map_free_disk(struct cgroup_name_map * const map)
 {
 	int i;
 
@@ -160,22 +127,12 @@ int cgroup_map_free_disk(struct cgroup_name_map * const map)
 	}
 
 	map->disk_len = 0;
-	return 0;
 }
 
-int cgroup_map_free(struct cgroup_name_map * const map)
+void cgroup_map_free(struct cgroup_name_map * const map)
 {
-	int ret;
-
-	if (map->cgx_names != NULL)
-		free(map->cgx_names);
-	if (map->cgx_values != NULL)
-		free(map->cgx_values);
-
-	ret = cgroup_map_free_cgx(map);
-	ret = cgroup_map_free_disk(map);
-
-	return ret;
+	cgroup_map_free_cgx(map);
+	cgroup_map_free_disk(map);
 }
 
 int cgroup_map_insert_cgx_name_value(struct cgroup_name_map * const map,
