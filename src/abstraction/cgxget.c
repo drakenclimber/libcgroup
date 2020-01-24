@@ -112,6 +112,8 @@ static int parse_cgget_opts(int argc, char *argv[],
 	int c, i, ret;
 	char *tmp;
 
+	map.cgx_version = args_version;
+
 	ret = cgroup_append_to_argv(cgget_argc, cgget_argv, CGGET);
 	if (ret)
 		goto err;
