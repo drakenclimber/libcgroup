@@ -98,33 +98,28 @@ static int process_r_flag(int * const argc, char ***argv,
 		return ECGFAIL;
 	}
 
-	map.prev_name = strdup(in_name);
-	if (map.prev_name == NULL)
+	map.cgx_name = strdup(in_name);
+	if (map.cgx_name == NULL)
 		return ECGOTHER;
 
-	map.prev_version = version;
-	map.prev_value = NULL;
+	map.cgx_version = version;
+	map.cgx_value = NULL;
 
 	ret = cgroup_map_convert_name(&map);
 	if (ret)
 		goto out;
 
-	for (i = 0; i < map.new_len; i++) {
+	for (i = 0; i < map.disk_len; i++) {
 		ret = cgroup_append_to_argv(argc, argv, "-r");
 		if (ret)
 			goto out;
 
-		ret = cgroup_append_to_argv(argc, argv, map.new_names[i]);
+		ret = cgroup_append_to_argv(argc, argv, map.disk_names[i]);
 		if (ret)
 			goto out;
 	}
 
 out:
-	if (map.prev_name != NULL)
-		free(map.prev_name);
-	if (map.prev_value != NULL)
-		free(map.prev_value);
-
 	return ret;
 }
 
