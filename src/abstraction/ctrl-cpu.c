@@ -20,28 +20,13 @@ static int v1_shares_to_v2(struct cgroup_name_map * const map,
 #define WEIGHT_STR_LEN 20
 
 	long int weight;
-	char *endptr, *weight_str = NULL;
+	char *weight_str = NULL;
 	int ret = 0;
 
 	if (shares_value) {
-		weight = strtol(shares_value, &endptr, 10);
-
-		/* taken directly from strtol's man page */
-		if ((errno == ERANGE &&
-		     (weight == LONG_MAX || weight == LONG_MIN))
-		    || (errno != 0 && weight == 0)) {
-			cgroup_err("Error: Failed to parse cpu.shares value: %s\n",
-				   shares_value);
-			ret = ECGFAIL;
+		ret = cgroup_strtol(shares_value, 10, &weight);
+		if (ret)
 			goto out;
-		}
-
-		if (endptr == shares_value) {
-			cgroup_err("Error: No value found in cpu.shares value %s\n",
-				   shares_value);
-			ret = ECGFAIL;
-			goto out;
-		}
 
 		/* now scale from cpu.shares to cpu.weight */
 		weight = weight * DEFAULT_WEIGHT_VALUE / DEFAULT_SHARES_VALUE;
@@ -72,28 +57,13 @@ static int v2_weight_to_v1(struct cgroup_name_map * const map,
 #define SHARES_STR_LEN 20
 
 	long int shares;
-	char *endptr, *shares_str = NULL;
+	char *shares_str = NULL;
 	int ret = 0;
 
 	if (weight_value) {
-		shares = strtol(weight_value, &endptr, 10);
-
-		/* taken directly from strtol's man page */
-		if ((errno == ERANGE &&
-		     (shares == LONG_MAX || shares == LONG_MIN))
-		    || (errno != 0 && shares == 0)) {
-			cgroup_err("Error: Failed to parse cpu.weight value: %s\n",
-				   weight_value);
-			ret = ECGFAIL;
+		ret = cgroup_strtol(weight_value, 10, &shares);
+		if (ret)
 			goto out;
-		}
-
-		if (endptr == weight_value) {
-			cgroup_err("Error: No value found in cpu.weight value %s\n",
-				   weight_value);
-			ret = ECGFAIL;
-			goto out;
-		}
 
 		/* now scale from cpu.shares to cpu.weight */
 		shares = shares * DEFAULT_SHARES_VALUE / DEFAULT_WEIGHT_VALUE;
