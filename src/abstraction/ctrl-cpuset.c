@@ -19,24 +19,18 @@ static int v1_exclusive_to_v2(struct cgroup_name_map * const map,
 			      const char * const exclusive_value)
 {
 	const char *partition_str = NULL;
-	long int exclusive;
 	int ret = 0;
 
 	if (exclusive_value) {
-		ret = cgroup_strtol(exclusive_value, 10, &exclusive);
-		if (ret)
-			goto out;
-
-		switch (exclusive) {
-		case 0:
+		if (strcmp(exclusive_value, zero) == 0) {
 			partition_str = member;
-			break;
-		case 1:
+		} else if (strcmp(exclusive_value, one) == 0) {
 			partition_str = root;
-			break;
-		default:
-			ret = ECGINVAL;
-			break;
+		} else {
+			cgroup_warn("Unsupported exclusive value: %s\n",
+				    exclusive_value);
+			ret = ECGROUPPARSEFAIL;
+			goto out;
 		}
 	}
 
