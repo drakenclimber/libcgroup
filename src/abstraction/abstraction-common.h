@@ -24,6 +24,8 @@ struct cgroup_name_map {
 	int disk_len;
 };
 
+int cgroup_strtol(const char * const in_str, int base,
+		  long int * const out_value);
 int cgroup_append_to_argv(int * const argc, char ***argv,
 			  const char * const new_arg);
 
@@ -41,5 +43,9 @@ int cgroup_map_insert_disk_name_value(struct cgroup_name_map * const map,
 /* ctrl-cpu.c functions */
 int cgroup_cpu_convert(struct cgroup_name_map * const map,
 		       enum cg_version_t ctrl_version);
+
+/* ctrl-cpuset.c functions */
+int cgroup_cpuset_convert(struct cgroup_name_map * const map,
+			  enum cg_version_t ctrl_version);
 
 #endif /* __ABSTRACTION_COMMON */

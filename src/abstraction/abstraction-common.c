@@ -1,12 +1,58 @@
 #include <libcgroup.h>
 #include <libcgroup-internal.h>
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "abstraction-common.h"
+
+int cgroup_strtol(const char * const in_str, int base,
+		  long int * const out_value)
+{
+	char *endptr;
+	int ret = 0;
+
+	*out_value = strtol(in_str, &endptr, base);
+
+	/* taken directly from strtol's man page */
+	if ((errno == ERANGE &&
+	     (*out_value == LONG_MAX || *out_value == LONG_MIN))
+	    || (errno != 0 && *out_value == 0)) {
+		cgroup_err("Error: Failed to convert %s from strtol: %s\n",
+			   in_str);
+		ret = ECGFAIL;
+		goto out;
+	}
+
+	if (endptr == in_str) {
+		cgroup_err("Error: No long value found in %s\n",
+			   in_str);
+		ret = ECGFAIL;
+		goto out;
+	}
+
+out:
+	return ret;
+}
+
+int cgroup_append_to_argv(int * const argc, char ***argv,
+			  const char * const new_arg)
+{
+	(*argv) = reallocarray((*argv), sizeof(char *), (*argc) + 1);
+	if (*argv == NULL)
+		return ECGOTHER;
+
+	(*argv)[*argc] = strdup(new_arg);
+	if ((*argv)[*argc] == NULL)
+		return ECGOTHER;
+
+	(*argc)++;
+
+	return 0;
+}
 
 static int get_controller_from_name(const char * const name,
 				    char **controller)
@@ -53,6 +99,7 @@ out:
 int cgroup_map_convert(struct cgroup_name_map * const map)
 {
 	bool converted_cpu = false;
+	bool converted_cpuset = false;
 	enum cg_version_t ctrl_version;
 	char *controller;
 	int i, ret = 0;
@@ -92,6 +139,13 @@ int cgroup_map_convert(struct cgroup_name_map * const map)
 		if (converted_cpu == false && strcmp(controller, "cpu") == 0) {
 			converted_cpu = true;
 			ret = cgroup_cpu_convert(map, ctrl_version);
+			if (ret)
+				goto err;
+		}
+		else if (converted_cpuset == false &&
+			 strcmp(controller, "cpuset") == 0) {
+			converted_cpuset = true;
+			ret = cgroup_cpuset_convert(map, ctrl_version);
 			if (ret)
 				goto err;
 		}
@@ -231,20 +285,4 @@ delete_disk:
 	 */
 	cgroup_map_free_disk(map);
 	return ret;
-}
-
-int cgroup_append_to_argv(int * const argc, char ***argv,
-			  const char * const new_arg)
-{
-	(*argv) = reallocarray((*argv), sizeof(char *), (*argc) + 1);
-	if (*argv == NULL)
-		return ECGOTHER;
-
-	(*argv)[*argc] = strdup(new_arg);
-	if ((*argv)[*argc] == NULL)
-		return ECGOTHER;
-
-	(*argc)++;
-
-	return 0;
 }
