@@ -8,6 +8,7 @@
 #include <getopt.h>
 
 #include "tools-common.h"
+#include "../abstraction/abstraction-common.h"
 
 #define MODE_SHOW_HEADERS		1
 #define MODE_SHOW_NAMES			2
@@ -57,38 +58,24 @@ static void usage(int status, const char *program_name)
 		"parameter names\n");
 }
 
-static int convert_display(const char * const controller,
-			   char * const name, char * const value,
-			   enum cg_version_t version)
-{
-	enum cg_version_t ctrl_version;
-	int ret;
-
-	ret = cgroup_get_controller_version(controller, &ctrl_version);
-	if (ret)
-		goto out;
-
-	if (ctrl_version == version)
-		/* no conversion necessary */
-		goto out;
-
-out:
-	return ret;
-}
-
 static int display_record(char *name,
 	struct cgroup_controller *group_controller,
 	const char *group_name, const char *program_name, int mode,
-	enum cg_version_t version)
+	//enum cg_version_t version)
+	struct cgroup_name_map * const map)
 {
 	int ret = 0;
 	void *handle;
 	char line[LL_MAX];
+	char *value = NULL;
 	int ind = 0;
 
 	/* start the reading of the variable value */
 	ret = cgroup_read_value_begin(group_controller->name,
 		group_name, name, &handle, line, LL_MAX);
+
+	if (mode & MODE_SHOW_NAMES)
+		printf("%s: ", name);
 
 	if (ret == ECGEOF) {
 		printf("\n");
@@ -98,23 +85,33 @@ static int display_record(char *name,
 	if (ret != 0)
 		goto end;
 
-	ret = convert_display(group_controller->name, name, line, version);
-	if (ret != 0)
+	value = strdup(line);
+	if (value == NULL)
 		goto end;
 
-	if (mode & MODE_SHOW_NAMES)
-		printf("%s: ", name);
-
 	printf("%s", line);
-	if (line[strlen(line)-1] == '\n')
+	if (line[strlen(line)-1] == '\n') {
 		/* if value continue on the next row. indent it */
 		ind = 1;
-
+	}
 
 	/* read iteratively the whole value  */
 	while ((ret = cgroup_read_value_next(&handle, line, LL_MAX)) == 0) {
-		if (ind == 1)
+		if (ind == 1) {
+			value = reallocarray(value, sizeof(char), strlen(value) + 1);
+			if (value == NULL)
+				goto end;
+
+			value = strcat(value, "\t");
+
 			printf("\t");
+		}
+
+		value = reallocarray(value, sizeof(char), strlen(value) + strlen(line));
+		if (value == NULL)
+			goto end;
+		value = strcat(value, line);
+
 		printf("%s", line);
 		ind = 0;
 
@@ -123,12 +120,21 @@ static int display_record(char *name,
 			ind = 1;
 	}
 
+	ret = cgroup_map_insert_cgx_name_value(map, name, value);
+	if (ret != 0)
+		goto end;
+
 read_end:
 	cgroup_read_value_end(&handle);
 	if (ret == ECGEOF)
 		ret = 0;
 
 end:
+	if (value != NULL) {
+		fprintf(stdout, "value = \n----------\n%s\n------------\n", value);
+		free(value);
+	}
+
 	if (ret != 0)
 		fprintf(stderr, "variable file read failed %s\n",
 			cgroup_strerror(ret));
@@ -138,7 +144,8 @@ end:
 
 
 static int display_name_values(char **names, const char* group_name,
-		const char *program_name, int mode, enum cg_version_t version)
+		const char *program_name, int mode,
+		struct cgroup_name_map * const map)
 {
 	int i;
 	struct cgroup_controller *group_controller = NULL;
@@ -190,7 +197,7 @@ static int display_name_values(char **names, const char* group_name,
 
 		/* Finally read the parameter value.*/
 		ret = display_record(names[i], group_controller,
-			group_name, program_name, mode, version);
+			group_name, program_name, mode, map);
 		if (ret != 0)
 			goto err;
 		i++;
@@ -204,7 +211,7 @@ err:
 }
 
 static int display_controller_values(char **controllers, const char *group_name,
-	const char *program_name, int mode, enum cg_version_t version)
+	const char *program_name, int mode, struct cgroup_name_map * const map)
 {
 	struct cgroup *group = NULL;
 	struct cgroup_controller *group_controller = NULL;
@@ -249,8 +256,7 @@ static int display_controller_values(char **controllers, const char *group_name,
 			name = cgroup_get_value_name(group_controller, i);
 			if (name != NULL) {
 				ret = display_record(name, group_controller,
-					group_name, program_name, mode,
-					version);
+					group_name, program_name, mode, map);
 				if (ret) {
 					result = ret;
 					goto err;
@@ -268,7 +274,7 @@ err:
 
 static int display_values(char **controllers, int max, const char *group_name,
 	char **names, int mode, const char *program_name,
-	enum cg_version_t version)
+	struct cgroup_name_map * const map)
 {
 	int ret, result = 0;
 
@@ -279,7 +285,7 @@ static int display_values(char **controllers, int max, const char *group_name,
 	/* display all wanted variables */
 	if (names[0] != NULL) {
 		ret = display_name_values(names, group_name, program_name,
-			mode, version);
+			mode, map);
 		if (ret)
 			result = ret;
 	}
@@ -287,7 +293,7 @@ static int display_values(char **controllers, int max, const char *group_name,
 	/* display all wanted controllers */
 	if (controllers[0] != NULL) {
 		ret = display_controller_values(controllers, group_name,
-			program_name, mode, version);
+			program_name, mode, map);
 		if (ret)
 			result = ret;
 	}
@@ -334,6 +340,9 @@ int cgget_main(int argc, char *argv[], enum cg_version_t version)
 	struct cgroup_mount_point controller;
 
 	int mode = MODE_SHOW_NAMES | MODE_SHOW_HEADERS;
+
+	struct cgroup_name_map map;
+	map.cgx_version = version;
 
 	/* No parameter on input? */
 	if (argc < 2) {
@@ -463,13 +472,13 @@ int cgget_main(int argc, char *argv[], enum cg_version_t version)
 		if (!cgroup_list[i])
 			break;
 		ret |= display_values(cgroup_list[i]->controllers, capacity,
-			cgroup_list[i]->path, names, mode, argv[0], version);
+			cgroup_list[i]->path, names, mode, argv[0], &map);
 	}
 
 	/* Parse control groups and print them .*/
 	for (i = optind; i < argc; i++) {
 		ret |= display_values(controllers, capacity,
-			argv[i], names, mode, argv[0], version);
+			argv[i], names, mode, argv[0], &map);
 	}
 
 err:
