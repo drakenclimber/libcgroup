@@ -57,6 +57,25 @@ static void usage(int status, const char *program_name)
 		"parameter names\n");
 }
 
+static int convert_display(const char * const controller,
+			   char * const name, char * const value,
+			   enum cg_version_t version)
+{
+	enum cg_version_t ctrl_version;
+	int ret;
+
+	ret = cgroup_get_controller_version(controller, &ctrl_version);
+	if (ret)
+		goto out;
+
+	if (ctrl_version == version)
+		/* no conversion necessary */
+		goto out;
+
+out:
+	return ret;
+}
+
 static int display_record(char *name,
 	struct cgroup_controller *group_controller,
 	const char *group_name, const char *program_name, int mode,
@@ -67,18 +86,9 @@ static int display_record(char *name,
 	char line[LL_MAX];
 	int ind = 0;
 
-	if (mode & MODE_SHOW_NAMES)
-		printf("%s: ", name);
-
 	/* start the reading of the variable value */
 	ret = cgroup_read_value_begin(group_controller->name,
 		group_name, name, &handle, line, LL_MAX);
-
-	fprintf(stdout, "TJH line = %s\n"
-		"TJH ctrl = %s\n"
-		"TJH name = %s\n"
-		"TJH group_name = %s\n",
-		line, group_controller->name, name, group_name);
 
 	if (ret == ECGEOF) {
 		printf("\n");
@@ -87,6 +97,13 @@ static int display_record(char *name,
 
 	if (ret != 0)
 		goto end;
+
+	ret = convert_display(group_controller->name, name, line, version);
+	if (ret != 0)
+		goto end;
+
+	if (mode & MODE_SHOW_NAMES)
+		printf("%s: ", name);
 
 	printf("%s", line);
 	if (line[strlen(line)-1] == '\n')
