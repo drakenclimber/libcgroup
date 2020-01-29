@@ -8,7 +8,7 @@
 #include <getopt.h>
 
 #include "abstraction-common.h"
-#include "../tools/tools-common.h"
+#include "tools-common.h"
 
 #define CGGET "cgget"
 

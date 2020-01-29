@@ -1,6 +1,5 @@
 #include <libcgroup.h>
 #include <libcgroup-internal.h>
-#include <abstraction-common.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,6 +7,7 @@
 #include <unistd.h>
 #include <getopt.h>
 
+#include "abstraction-common.h"
 #include "tools-common.h"
 
 #define MODE_SHOW_HEADERS		1
@@ -497,19 +497,4 @@ err_free:
 	free(names);
 
 	return result;
-}
-
-int main(int argc, char *argv[])
-{
-	int len;
-
-	fprintf(stdout, "cgget argc = %d\n", argc);
-	len = 0;
-	while (len < argc) {
-		fprintf(stdout, " %s", argv[len]);
-		len++;
-	}
-	fprintf(stdout, "\n");
-
-	return cgget_main(argc, argv, CGROUP_UNK);
 }

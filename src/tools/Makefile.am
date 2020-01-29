@@ -6,12 +6,15 @@ LDADD = $(top_builddir)/src/.libs/libcgroup.la
 if WITH_TOOLS
 
 bin_PROGRAMS = cgexec cgclassify cgcreate cgset cgget cgdelete lssubsys\
-		lscgroup cgsnapshot
+		lscgroup cgsnapshot cgxget cgxset
 
 sbin_PROGRAMS = cgconfigparser cgclear
 
 lib_LTLIBRARIES = libcgrouptools.la
-libcgrouptools_la_SOURCES = tools-common.c tools-common.h cgget.c
+libcgrouptools_la_SOURCES = tools-common.c tools-common.h \
+	cgget.c cgget-main.c \
+	abstraction-common.c abstraction-common.h \
+	ctrl-cpu.c ctrl-cpuset.c
 libcgrouptools_la_CFLAGS = $(CODE_COVERAGE_CFLAGS) -DSTATIC=static
 libcgrouptools_la_LDFLAGS = -Wl \
 	-version-number $(LIBRARY_VERSION_MAJOR):$(LIBRARY_VERSION_MINOR):$(LIBRARY_VERSION_RELEASE)
@@ -32,7 +35,9 @@ cgset_SOURCES = cgset.c tools-common.c tools-common.h
 cgset_LIBS = $(CODE_COVERAGE_LIBS)
 cgset_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 
-cgget_SOURCES = cgget.c tools-common.c tools-common.h
+cgget_SOURCES = cgget.c cgget-main.c tools-common.c tools-common.h \
+	abstraction-common.c abstraction-common.h \
+	ctrl-cpu.c ctrl-cpuset.c
 cgget_LIBS = $(CODE_COVERAGE_LIBS)
 cgget_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 
@@ -59,6 +64,20 @@ lscgroup_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 cgsnapshot_SOURCES = cgsnapshot.c
 cgsnapshot_LIBS = $(CODE_COVERAGE_LIBS)
 cgsnapshot_CFLAGS = $(CODE_COVERAGE_CFLAGS)
+
+cgxget_SOURCES = cgxget.c cgget.c \
+	tools-common.c tools-common.h \
+	abstraction-common.c abstraction-common.h \
+	ctrl-cpu.c ctrl-cpuset.c
+cgxget_LIBS = $(CODE_COVERAGE_LIBS)
+cgxget_CFLAGS = $(CODE_COVERAGE_CFLAGS)
+
+cgxset_SOURCES = cgxset.c cgset.h \
+	tools-common.c tools-common.h \
+	abstraction-common.c abstraction-common.h \
+	ctrl-cpu.c ctrl-cpuset.c
+cgxset_LIBS = $(CODE_COVERAGE_LIBS)
+cgxset_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 
 install-exec-hook:
 	chmod u+s $(DESTDIR)$(bindir)/cgexec
