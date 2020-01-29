@@ -68,7 +68,6 @@ static int get_controller_from_name(const char * const name,
 		return ECGINVAL;
 
 	*dot = '\0';
-	fprintf(stdout, "ctrlr = %s\n", *controller);
 	return 0;
 }
 
@@ -87,8 +86,6 @@ static int get_value_from_name(const char * const name, char **value)
 	}
 
 	*value = strdup(tok);
-	fprintf(stdout, "%s: value = %s\n", __func__, *value);
-
 out:
 	if (copy)
 		free(copy);

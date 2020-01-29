@@ -73,6 +73,12 @@ static int display_record(char *name,
 	ret = cgroup_read_value_begin(group_controller->name,
 		group_name, name, &handle, line, LL_MAX);
 
+	fprintf(stdout, "TJH line = %s\n"
+		"TJH ctrl = %s\n"
+		"TJH name = %s\n"
+		"TJH group_name = %s\n",
+		line, group_controller->name, name, group_name);
+
 	if (ret == ECGEOF) {
 		printf("\n");
 		goto read_end;
@@ -292,8 +298,7 @@ int add_record_to_buffer(char **buffer, char *record, int capacity)
 	return 1;
 }
 
-int cgget_main(int argc, char *argv[], char *settings[], char *values[],
-	       int *len)
+int cgget_main(int argc, char *argv[], enum cg_version_t version)
 {
 	int ret = 0;
 	int result = 0;
@@ -447,12 +452,6 @@ int cgget_main(int argc, char *argv[], char *settings[], char *values[],
 			argv[i], names, mode, argv[0]);
 	}
 
-	i = 0;
-	while (names[i] != 0) {
-		fprintf(stderr, "names[%d] = %s\n", i, names[i]);
-		i++;
-	}
-
 err:
 	for (i = 0; i < capacity; i++) {
 		if (cgroup_list[i])
@@ -483,5 +482,5 @@ int main(int argc, char *argv[])
 	}
 	fprintf(stdout, "\n");
 
-	return cgget_main(argc, argv, NULL, NULL, &len);
+	return cgget_main(argc, argv, CGROUP_UNK);
 }

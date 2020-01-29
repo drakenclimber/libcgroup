@@ -122,7 +122,6 @@ int parse_mode(char *string, mode_t *pmode, const char *program_name);
 int parse_uid_gid(char *string, uid_t *uid, gid_t *gid,
 		const char *program_name);
 
-int cgget_main(int argc, char *argv[], char *settings[], char *values[],
-	       int *len);
+int cgget_main(int argc, char *argv[], enum cg_version_t version);
 
 #endif /* TOOLS_COMMON */

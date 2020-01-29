@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
 
 	/* reset the getopt index back to the start */
 	optind = 0;
-	result = cgget_main(cgget_argc, cgget_argv, NULL, NULL, &i);
+	result = cgget_main(cgget_argc, cgget_argv, version);
 err:
 	return (result < 0) ? -result : result;
 }
