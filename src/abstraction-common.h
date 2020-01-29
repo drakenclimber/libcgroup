@@ -3,7 +3,7 @@
 
 #include "config.h"
 #include <libcgroup.h>
-#include "../libcgroup-internal.h"
+#include "libcgroup-internal.h"
 
 struct cgroup_name_map {
 	/* The cgx_* fields contain the name/value pairs of cgroup settings

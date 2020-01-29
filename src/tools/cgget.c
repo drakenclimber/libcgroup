@@ -1,5 +1,6 @@
 #include <libcgroup.h>
 #include <libcgroup-internal.h>
+#include <abstraction-common.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,7 +9,6 @@
 #include <getopt.h>
 
 #include "tools-common.h"
-#include "../abstraction/abstraction-common.h"
 
 #define MODE_SHOW_HEADERS		1
 #define MODE_SHOW_NAMES			2

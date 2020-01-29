@@ -1,8 +1,7 @@
 @CODE_COVERAGE_RULES@
 
 INCLUDES = -I$(top_srcdir)/src -I$(top_srcdir)/include
-LDADD = $(top_builddir)/src/.libs/libcgroup.la \
-	$(top_builddir)/src/abstraction/.libs/libcgroupabstraction.la
+LDADD = $(top_builddir)/src/.libs/libcgroup.la
 
 if WITH_TOOLS
 
