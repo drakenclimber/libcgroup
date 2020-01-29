@@ -2562,6 +2562,49 @@ static int cg_delete_cgroup_controller_recursive(char *cgroup_name,
 	return ret;
 }
 
+/** returns the appropriate tasks/proc file based on v1 vs v2 */
+static int cgroup_open_tasks_or_proc_file(char *parent_name, char *parent_path,
+					  char *controller_name,
+					  FILE **parent_tasks)
+{
+	enum cg_version_t version;
+	char *ret_s;
+	int ret;
+
+	ret = cgroup_get_controller_version(controller_name, &version);
+	if (ret)
+		return ret;
+
+	ret_s = cg_build_path(parent_name, parent_path, controller_name);
+	if (ret_s == NULL)
+		/*
+		 * No path was created.  Likely because the controller wasn't
+		 * found.
+		 */
+		return ret;
+
+	switch (version) {
+	case CGROUP_V1:
+		strncat(parent_path, "/tasks",
+			sizeof(parent_path) - strlen(parent_path));
+		break;
+
+	case CGROUP_V2:
+		strncat(parent_path, "/cgroup.procs",
+			sizeof(parent_path) - strlen(parent_path));
+		break;
+
+	default:
+		return ECGINVAL;
+	}
+
+	*parent_tasks = fopen(parent_path, "we");
+	if (!(*parent_tasks))
+		return ECGOTHER;
+
+	return 0;
+}
+
 /** cgroup_delete cgroup deletes a control group.
  *  struct cgroup *cgroup takes the group which is to be deleted.
  *
@@ -2582,20 +2625,24 @@ int cgroup_delete_cgroup_ext(struct cgroup *cgroup, int flags)
 	char *parent_name = NULL;
 	int delete_group = 1;
 
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	if (!cgroup_initialized)
 		return ECGROUPNOTINITIALIZED;
 
 	if (!cgroup)
 		return ECGROUPNOTALLOWED;
 
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	if ((flags & CGFLAG_DELETE_RECURSIVE)
 			&& (flags & CGFLAG_DELETE_EMPTY_ONLY))
 		return ECGINVAL;
 
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	for (i = 0; i < cgroup->index; i++) {
 		if (!cgroup_test_subsys_mounted(cgroup->controller[i]->name))
 			return ECGROUPSUBSYSNOTMOUNTED;
 	}
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 
 	/*
 	 * Remove the group from all controllers.
@@ -2603,8 +2650,10 @@ int cgroup_delete_cgroup_ext(struct cgroup *cgroup, int flags)
 	for (i = 0; i < cgroup->index; i++) {
 		ret = 0;
 
+		fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 		/* find parent, it can be different for each controller */
 		if (!(flags & CGFLAG_DELETE_EMPTY_ONLY)) {
+			fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 			ret = cgroup_find_parent(cgroup,
 					cgroup->controller[i]->name,
 					&parent_name);
@@ -2639,22 +2688,21 @@ int cgroup_delete_cgroup_ext(struct cgroup *cgroup, int flags)
 					 * recursive mode
 					 */
 					continue;
-			}
+}
 		}
 
+		fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 		if (parent_name) {
-			/* tasks need to be moved, pre-open target tasks file */
-			if (!cg_build_path(parent_name, parent_path,
-					cgroup->controller[i]->name)) {
+			ret = cgroup_open_tasks_or_proc_file(parent_name,
+				parent_path, cgroup->controller[i]->name,
+				&parent_tasks);
+			if (ret) {
 				if (first_error == 0)
 					first_error = ECGFAIL;
 				free(parent_name);
 				continue;
 			}
-			strncat(parent_path, "/tasks", sizeof(parent_path)
-					- strlen(parent_path));
 
-			parent_tasks = fopen(parent_path, "we");
 			if (!parent_tasks) {
 				if (first_error == 0) {
 					cgroup_warn("Warning: cannot open tasks file %s: %s\n",
