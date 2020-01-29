@@ -86,11 +86,7 @@ static int display_record(char *name,
 	ret = cgroup_read_value_begin(group_controller->name,
 		group_name, name, &handle, line, LL_MAX);
 
-	if (mode & MODE_SHOW_NAMES)
-		printf("%s: ", name);
-
 	if (ret == ECGEOF) {
-		printf("\n");
 		goto read_end;
 	}
 
@@ -101,7 +97,6 @@ static int display_record(char *name,
 	if (value == NULL)
 		goto end;
 
-	printf("%s", line);
 	if (line[strlen(line)-1] == '\n') {
 		/* if value continue on the next row. indent it */
 		ind = 1;
@@ -115,8 +110,6 @@ static int display_record(char *name,
 				goto end;
 
 			value = strcat(value, "\t");
-
-			printf("\t");
 		}
 
 		value = reallocarray(value, sizeof(char), strlen(value) + strlen(line) + 1);
@@ -124,7 +117,6 @@ static int display_record(char *name,
 			goto end;
 		value = strcat(value, line);
 
-		printf("%s", line);
 		ind = 0;
 
 		/* if value continue on the next row. indent it */
@@ -142,18 +134,11 @@ read_end:
 		ret = 0;
 
 end:
-	if (value != NULL) {
-		fprintf(stdout, "value = \n----------\n%s\n------------\n", value);
-		free(value);
-	}
-
 	if (ret != 0)
 		fprintf(stderr, "variable file read failed %s\n",
 			cgroup_strerror(ret));
 	return ret;
 }
-
-
 
 static int display_name_values(char **names, const char* group_name,
 		const char *program_name, int mode,
@@ -287,9 +272,13 @@ err:
 
 static int display_values(char **controllers, int max, const char *group_name,
 	char **names, int mode, const char *program_name,
-	struct cgroup_name_map * const map)
+	enum cg_version_t version)
 {
 	int ret, result = 0;
+
+	struct cgroup_name_map map = {0};
+	map.in_version = CGROUP_DISK;
+	map.out_version = version;
 
 	/* display the directory if needed */
 	if (mode & MODE_SHOW_HEADERS)
@@ -298,7 +287,7 @@ static int display_values(char **controllers, int max, const char *group_name,
 	/* display all wanted variables */
 	if (names[0] != NULL) {
 		ret = display_name_values(names, group_name, program_name,
-			mode, map);
+			mode, &map);
 		if (ret)
 			result = ret;
 	}
@@ -306,14 +295,25 @@ static int display_values(char **controllers, int max, const char *group_name,
 	/* display all wanted controllers */
 	if (controllers[0] != NULL) {
 		ret = display_controller_values(controllers, group_name,
-			program_name, mode, map);
+			program_name, mode, &map);
 		if (ret)
 			result = ret;
 	}
 
+	/* Convert the map to the format requested by the user */
+	ret = cgroup_map_convert(&map);
+	if (ret)
+		result = ret;
+
+	ret = display_map(&map, mode);
+	if (ret)
+		result = ret;
+
 	/* separate each group with empty line. */
 	if (mode & MODE_SHOW_HEADERS)
 		printf("\n");
+
+	cgroup_map_free(&map);
 
 	return result;
 }
@@ -353,10 +353,6 @@ int cgget_main(int argc, char *argv[], enum cg_version_t version)
 	struct cgroup_mount_point controller;
 
 	int mode = MODE_SHOW_NAMES | MODE_SHOW_HEADERS;
-
-	struct cgroup_name_map map = {0};
-	map.in_version = CGROUP_DISK;
-	map.out_version = version;
 
 	/* No parameter on input? */
 	if (argc < 2) {
@@ -486,22 +482,13 @@ int cgget_main(int argc, char *argv[], enum cg_version_t version)
 		if (!cgroup_list[i])
 			break;
 		ret |= display_values(cgroup_list[i]->controllers, capacity,
-			cgroup_list[i]->path, names, mode, argv[0], &map);
+			cgroup_list[i]->path, names, mode, argv[0], version);
 	}
 
 	/* Parse control groups */
 	for (i = optind; i < argc; i++) {
 		ret |= display_values(controllers, capacity,
-			argv[i], names, mode, argv[0], &map);
-	}
-
-	/* Convert the map to the format requested by the user */
-	ret |= cgroup_map_convert(&map);
-	ret |= display_map(&map, mode);
-
-	for (i = 0; i < map.out_len; i++) {
-		fprintf(stdout, "map[%d] %s : %s\n",
-			i, map.out_names[i], map.out_values[i]);
+			argv[i], names, mode, argv[0], version);
 	}
 
 err:
@@ -518,7 +505,6 @@ err_free:
 	free(cgroup_list);
 	free(controllers);
 	free(names);
-	cgroup_map_free(&map);
 
 	return result;
 }

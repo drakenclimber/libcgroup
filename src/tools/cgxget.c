@@ -219,13 +219,6 @@ int main(int argc, char *argv[])
 	if (result)
 		goto err;
 
-	int i;
-	fprintf(stdout, "cgget argc = %d\n", cgget_argc);
-	fprintf(stdout, "cgget");
-	for (i = 1; i < cgget_argc; i++)
-		fprintf(stdout, " %s", cgget_argv[i]);
-	fprintf(stdout, "\n");
-
 	/* reset the getopt index back to the start */
 	optind = 0;
 	result = cgget_main(cgget_argc, cgget_argv, version);
