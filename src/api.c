@@ -1164,7 +1164,7 @@ static int cgroup_process_v2_mnt(struct mntent *ent, int *found_mnt)
 {
 	char cgroup_controllers_path[FILENAME_MAX];
 	char *ret_c = NULL, line[LL_MAX], *stok_buff = NULL;
-	int ret, i, duplicate;
+	int ret = 0, i, duplicate;
 	FILE *fp = NULL;
 
 	/* determine what v2 controllers are available on this mount */
@@ -1179,7 +1179,11 @@ static int cgroup_process_v2_mnt(struct mntent *ent, int *found_mnt)
 
 	ret_c = fgets(line, LL_MAX, fp);
 	if (ret_c == NULL) {
-		ret = ECGEOF;
+		/* In a hybrid cgroup v1 and cgroup v2 unified mount
+		 * situation, the cgroup.controllers file could validly be
+		 * NULL.
+		 */
+		ret = 0;
 		goto out;
 	}
 
@@ -1461,6 +1465,7 @@ static char *cg_build_path_locked(const char *name, char *path,
 						const char *type)
 {
 	int i;
+
 	for (i = 0; cg_mount_table[i].name[0] != '\0'; i++) {
 		if (strcmp(cg_mount_table[i].name, type) == 0) {
 			if (cg_namespace_table[i]) {
@@ -1944,6 +1949,73 @@ err:
 	return ret;
 }
 
+static int cgroupv2_subtree_control(char *path, const char *name,
+				    int enable, int recursive)
+{
+	char *path_copy = NULL;
+	char *value = NULL;
+	int ret = 0;
+
+	if (!path || !name)
+		return ECGOTHER;
+
+	value = (char *)malloc(FILENAME_MAX);
+	if (!value)
+		goto out;
+
+	path_copy = (char *)malloc(FILENAME_MAX);
+	if (!path_copy)
+		goto out;
+	strncpy(path_copy, path, FILENAME_MAX);
+
+	do {
+		strncat(path_copy, "/cgroup.subtree_control",
+			sizeof("cgroup.subtree_control"));
+
+		if (enable)
+			ret = snprintf(value, FILENAME_MAX, "+%s", name);
+		else
+			ret = snprintf(value, FILENAME_MAX, "-%s", name);
+		if (ret < 0)
+			goto out;
+
+		ret = cg_set_control_value(path_copy, value);
+		if (ret) {
+			/*
+			 * TODO - walking the tree could sooner or later
+			 * lead to a failure if cgroups are mounted below
+			 * a non-cgroup folder.  Should we override the
+			 * failing return code in such a case?
+			 */
+			goto out;
+		}
+
+		if (!recursive)
+			/* only set the subtree_control once.  bail out */
+			break;
+
+		/* strip off cgroup.subtree_control */
+		path_copy = dirname(path_copy);
+		/* strip off the "right-most" directory */
+		path_copy = dirname(path_copy);
+
+		/*
+		 * TODO - if someone chose to mount cgroupv2 at /, then this
+		 * logic would fail
+		 */
+		if (strlen(path_copy) <= 1)
+			/* we've recursed to the root.  bail out */
+			break;
+	} while(1);
+
+out:
+	if (value)
+		free(value);
+	if (path_copy)
+		free(path_copy);
+	return ret;
+}
+
 /** cgroup_create_cgroup creates a new control group.
  * struct cgroup *cgroup: The control group to be created
  *
@@ -1954,7 +2026,9 @@ err:
  */
 int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 {
+	enum cg_version_t version;
 	char *fts_path[2];
+	char *value = NULL;
 	char *base = NULL;
 	char *path = NULL;
 	int i, j, k;
@@ -1970,8 +2044,15 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 
 	for (i = 0; i < cgroup->index;	i++) {
 		if (!cgroup_test_subsys_mounted(cgroup->controller[i]->name))
-			return ECGROUPSUBSYSNOTMOUNTED;
+			/*
+			 * The controller is not mounted in a cgroup v1
+			 * hierarchy, but may still be available in v2
+			 */
+			cgroup_dbg("create: v1 controller is not mounted: %s\n",
+				   cgroup->controller[i]->name);
 	}
+
+	value = (char *)malloc(FILENAME_MAX);
 
 	fts_path[0] = (char *)malloc(FILENAME_MAX);
 	if (!fts_path[0]) {
@@ -2029,6 +2110,7 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 				error = ECGOTHER;
 				goto err;
 			}
+
 			error = cg_set_control_value(path,
 				cgroup->controller[k]->values[j]->value);
 			/*
@@ -2050,7 +2132,11 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 			}
 		}
 
-		if (!ignore_ownership) {
+		version = -1;
+		ret = cgroup_get_controller_version(
+			cgroup->controller[k]->name, &version);
+
+		if (!ignore_ownership && version == CGROUP_V1) {
 			ret = snprintf(path, FILENAME_MAX, "%s/tasks", base);
 			if (ret < 0 || ret >= FILENAME_MAX) {
 				last_errno = errno;
@@ -2070,11 +2156,31 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 			}
 
 		}
+
+		if (version == CGROUP_V2) {
+			cgroupv2_subtree_control(path,
+				cgroup->controller[k]->name, 1, 1);
+#if 0
+			/* TODO - handle ret values */
+			fprintf(stdout, "TJH V2!!!!!\n");
+
+			ret = snprintf(path, FILENAME_MAX,
+					"%s/cgroup.subtree_control", base);
+			ret = snprintf(value, FILENAME_MAX, "+%s",
+					cgroup->controller[k]->name);
+			fprintf(stdout, "TJH path = %s\n", path);
+
+			ret = cg_set_control_value(path, value);
+#endif
+		}
+
 		free(base);
 		base = NULL;
 	}
 
 err:
+	if (value)
+		free(value);
 	if (path)
 		free(path);
 	if (base)
