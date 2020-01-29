@@ -10,40 +10,38 @@
 #include "abstraction-common.h"
 #include "../tools/tools-common.h"
 
-#define CGGET "cgget"
+#define CGSET "cgset"
+
+enum {
+	COPY_FROM_OPTION = CHAR_MAX + 1
+};
 
 static struct option const long_options[] =
 {
 	{"v1", no_argument, NULL, '1'},
 	{"v2", no_argument, NULL, '2'},
-	{"variable", required_argument, NULL, 'r'},
+	{"rule", required_argument, NULL, 'r'},
 	{"help", no_argument, NULL, 'h'},
-	{"all",  no_argument, NULL, 'a'},
-	{"values-only", no_argument, NULL, 'v'},
+	{"copy-from", required_argument, NULL, COPY_FROM_OPTION},
 	{NULL, 0, NULL, 0}
 };
 
 static void usage(const char *program_name)
 {
-	printf("Usage: %s [-1] [-2] [-nv] [-r <name>] [-g <controllers>] "\
-		"[-a] <path> ...\n"\
-		"   or: %s [-nv] [-r <name>] -g <controllers>:<path> ...\n",
-		program_name, program_name);
+	printf("Usage: %s [-1] [-2] [-r <name=value>] <cgroup_path> ...\n"
+		"   or: %s --copy-from <source_cgroup_path> "\
+		"<cgroup_path> ...\n", program_name, program_name);
+	printf("Set the parameters of given cgroup(s)\n");
 	printf("  -1, --v1			Provided parameters are in "
 		"v1 format\n");
 	printf("  -2, --v2			Provided parameters are in "
 		"v2 format\n");
 	printf("  -a, --all			Print info about all relevant "\
 		"controllers\n");
-	printf("  -g <controllers>		Controller which info should "\
-		"be displayed\n");
-	printf("  -g <controllers>:<path>	Control group which info "\
-		"should be displayed\n");
-	printf("  -h, --help			Display this help\n");
-	printf("  -n				Do not print headers\n");
-	printf("  -r, --variable  <name>	Define parameter to display\n");
-	printf("  -v, --values-only		Print only values, not "\
-		"parameter names\n");
+	printf("  -r, --variable <name>			Define parameter "\
+		"to set\n");
+	printf("  --copy-from <source_cgroup_path>	Control group whose "\
+		"parameters will be copied\n");
 }
 
 static int parse_abstract_opts(int argc, char *argv[],
@@ -95,7 +93,7 @@ static int process_r_flag(struct cgroup_name_map * const map,
 	int ret = 0;
 
 	if (in_name == NULL) {
-		usage(CGGET);
+		usage(CGSET);
 		return ECGFAIL;
 	}
 
@@ -107,8 +105,8 @@ static int process_r_flag(struct cgroup_name_map * const map,
 	return ret;
 }
 
-static int parse_cgget_opts(int argc, char *argv[],
-			    int * const cgget_argc, char ***cgget_argv,
+static int parse_cgset_opts(int argc, char *argv[],
+			    int * const cgset_argc, char ***cgset_argv,
 			    enum cg_version_t args_version)
 {
 	struct cgroup_name_map map = {0};
@@ -117,7 +115,7 @@ static int parse_cgget_opts(int argc, char *argv[],
 
 	map.cgx_version = args_version;
 
-	ret = cgroup_append_to_argv(cgget_argc, cgget_argv, CGGET);
+	ret = cgroup_append_to_argv(cgset_argc, cgset_argv, CGSET);
 	if (ret)
 		goto err;
 
@@ -125,23 +123,19 @@ static int parse_cgget_opts(int argc, char *argv[],
 	while ((c = getopt_long(argc, argv, "r:hnvg:a12", long_options,
 				NULL)) > 0) {
 		switch (c) {
-		case 'a':
-		case 'g':
 		case 'h':
-		case 'n':
-		case 'v':
 			tmp = malloc(3);
 			tmp[0] = '-';
 			tmp[1] = c;
 			tmp[2] = '\0';
-			ret = cgroup_append_to_argv(cgget_argc, cgget_argv,
+			ret = cgroup_append_to_argv(cgset_argc, cgset_argv,
 						    tmp);
 			if (ret)
 				goto err;
 
 			if (optarg) {
-				ret = cgroup_append_to_argv(cgget_argc,
-							    cgget_argv,
+				ret = cgroup_append_to_argv(cgset_argc,
+							    cgset_argv,
 							    optarg);
 				if (ret)
 					goto err;
@@ -164,11 +158,11 @@ static int parse_cgget_opts(int argc, char *argv[],
 		goto err;
 
 	for (i = 0; i < map.disk_len; i++) {
-		ret = cgroup_append_to_argv(cgget_argc, cgget_argv, "-r");
+		ret = cgroup_append_to_argv(cgset_argc, cgset_argv, "-r");
 		if (ret)
 			goto err;
 
-		ret = cgroup_append_to_argv(cgget_argc, cgget_argv,
+		ret = cgroup_append_to_argv(cgset_argc, cgset_argv,
 					    map.disk_names[i]);
 		if (ret)
 			goto err;
@@ -176,7 +170,7 @@ static int parse_cgget_opts(int argc, char *argv[],
 
 	/* append any non-getopt parameters */
 	while(argv[optind] != NULL) {
-		ret = cgroup_append_to_argv(cgget_argc, cgget_argv,
+		ret = cgroup_append_to_argv(cgset_argc, cgset_argv,
 					    argv[optind]);
 		if (ret)
 			goto err;
@@ -193,8 +187,8 @@ int main(int argc, char *argv[])
 {
 	enum cg_version_t version;
 	int result = 0;
-	int cgget_argc = 0;
-	char **cgget_argv = NULL;
+	int cgset_argc = 0;
+	char **cgset_argv = NULL;
 
 	if (argc < 2) {
 		usage(argv[0]);
@@ -213,21 +207,22 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
-	result = parse_cgget_opts(argc, argv, &cgget_argc, &cgget_argv,
+	result = parse_cgset_opts(argc, argv, &cgset_argc, &cgset_argv,
 				  version);
 	if (result)
 		goto err;
 
 	int i;
-	fprintf(stdout, "cgget argc = %d\n", cgget_argc);
-	fprintf(stdout, "cgget");
-	for (i = 1; i < cgget_argc; i++)
-		fprintf(stdout, " %s", cgget_argv[i]);
+	fprintf(stdout, "cgset argc = %d\n", cgset_argc);
+	fprintf(stdout, "cgset");
+	for (i = 1; i < cgset_argc; i++)
+		fprintf(stdout, " %s", cgset_argv[i]);
 	fprintf(stdout, "\n");
 
 	/* reset the getopt index back to the start */
 	optind = 0;
-	result = cgget_main(cgget_argc, cgget_argv, NULL, NULL, &i);
+	//result = cgset_main(cgset_argc, cgset_argv, NULL, NULL, &i);
+	result = ECGINVAL;
 err:
 	return (result < 0) ? -result : result;
 }
