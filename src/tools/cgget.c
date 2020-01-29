@@ -59,7 +59,8 @@ static void usage(int status, const char *program_name)
 
 static int display_record(char *name,
 	struct cgroup_controller *group_controller,
-	const char *group_name, const char *program_name, int mode)
+	const char *group_name, const char *program_name, int mode,
+	enum cg_version_t version)
 {
 	int ret = 0;
 	void *handle;
@@ -120,7 +121,7 @@ end:
 
 
 static int display_name_values(char **names, const char* group_name,
-		const char *program_name, int mode)
+		const char *program_name, int mode, enum cg_version_t version)
 {
 	int i;
 	struct cgroup_controller *group_controller = NULL;
@@ -172,7 +173,7 @@ static int display_name_values(char **names, const char* group_name,
 
 		/* Finally read the parameter value.*/
 		ret = display_record(names[i], group_controller,
-			group_name, program_name, mode);
+			group_name, program_name, mode, version);
 		if (ret != 0)
 			goto err;
 		i++;
@@ -186,7 +187,7 @@ err:
 }
 
 static int display_controller_values(char **controllers, const char *group_name,
-	const char *program_name, int mode)
+	const char *program_name, int mode, enum cg_version_t version)
 {
 	struct cgroup *group = NULL;
 	struct cgroup_controller *group_controller = NULL;
@@ -231,7 +232,8 @@ static int display_controller_values(char **controllers, const char *group_name,
 			name = cgroup_get_value_name(group_controller, i);
 			if (name != NULL) {
 				ret = display_record(name, group_controller,
-					group_name, program_name, mode);
+					group_name, program_name, mode,
+					version);
 				if (ret) {
 					result = ret;
 					goto err;
@@ -248,7 +250,8 @@ err:
 }
 
 static int display_values(char **controllers, int max, const char *group_name,
-	char **names, int mode, const char *program_name)
+	char **names, int mode, const char *program_name,
+	enum cg_version_t version)
 {
 	int ret, result = 0;
 
@@ -259,7 +262,7 @@ static int display_values(char **controllers, int max, const char *group_name,
 	/* display all wanted variables */
 	if (names[0] != NULL) {
 		ret = display_name_values(names, group_name, program_name,
-			mode);
+			mode, version);
 		if (ret)
 			result = ret;
 	}
@@ -267,7 +270,7 @@ static int display_values(char **controllers, int max, const char *group_name,
 	/* display all wanted controllers */
 	if (controllers[0] != NULL) {
 		ret = display_controller_values(controllers, group_name,
-			program_name, mode);
+			program_name, mode, version);
 		if (ret)
 			result = ret;
 	}
@@ -443,13 +446,13 @@ int cgget_main(int argc, char *argv[], enum cg_version_t version)
 		if (!cgroup_list[i])
 			break;
 		ret |= display_values(cgroup_list[i]->controllers, capacity,
-			cgroup_list[i]->path, names, mode, argv[0]);
+			cgroup_list[i]->path, names, mode, argv[0], version);
 	}
 
 	/* Parse control groups and print them .*/
 	for (i = optind; i < argc; i++) {
 		ret |= display_values(controllers, capacity,
-			argv[i], names, mode, argv[0]);
+			argv[i], names, mode, argv[0], version);
 	}
 
 err:
