@@ -42,7 +42,7 @@ static int v1_shares_to_v2(struct cgroup_name_map * const map,
 		}
 	}
 
-	ret = cgroup_map_insert_disk_name_value(map, cpu_weight, weight_str);
+	ret = cgroup_map_insert_out_name_value(map, cpu_weight, weight_str);
 
 out:
 	if (weight_str)
@@ -79,7 +79,7 @@ static int v2_weight_to_v1(struct cgroup_name_map * const map,
 		}
 	}
 
-	ret = cgroup_map_insert_disk_name_value(map, cpu_shares, shares_str);
+	ret = cgroup_map_insert_out_name_value(map, cpu_shares, shares_str);
 
 out:
 	if (shares_str)
@@ -96,9 +96,9 @@ static int v1_to_v2(struct cgroup_name_map * const map)
 	 * mapping to cpu cgroup v2 settings.  If/When this no longer becomes
 	 * the case, we can make this function smarter.
 	 */
-	for (i = 0; i < map->cgx_len; i++) {
-		if (strcmp(map->cgx_names[i], cpu_shares) == 0)
-			ret = v1_shares_to_v2(map, map->cgx_values[i]);
+	for (i = 0; i < map->in_len; i++) {
+		if (strcmp(map->in_names[i], cpu_shares) == 0)
+			ret = v1_shares_to_v2(map, map->in_values[i]);
 		if (ret)
 			goto out;
 	}
@@ -115,9 +115,9 @@ static int v2_to_v1(struct cgroup_name_map * const map)
 	 * mapping to cpu cgroup v2 settings.  If/When this no longer becomes
 	 * the case, we can make this function smarter.
 	 */
-	for (i = 0; i < map->cgx_len; i++) {
-		if (strcmp(map->cgx_names[i], cpu_weight) == 0)
-			ret = v2_weight_to_v1(map, map->cgx_values[i]);
+	for (i = 0; i < map->in_len; i++) {
+		if (strcmp(map->in_names[i], cpu_weight) == 0)
+			ret = v2_weight_to_v1(map, map->in_values[i]);
 		if (ret)
 			goto out;
 	}
@@ -127,9 +127,9 @@ out:
 }
 
 int cgroup_cpu_convert(struct cgroup_name_map * const map,
-		       enum cg_version_t ctrl_version)
+		       enum cg_version_t out_version)
 {
-	switch (ctrl_version) {
+	switch (out_version) {
 	case CGROUP_V1:
 		return v2_to_v1(map);
 	case CGROUP_V2:

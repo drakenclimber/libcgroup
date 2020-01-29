@@ -98,18 +98,20 @@ int cgroup_map_convert(struct cgroup_name_map * const map)
 	bool converted_cpu = false;
 	bool converted_cpuset = false;
 	enum cg_version_t ctrl_version;
+	enum cg_version_t in_version = map->in_version;
+	enum cg_version_t out_version = map->out_version;
 	char *controller;
 	int i, ret = 0;
 
-	for (i = 0; i < map->cgx_len; i++) {
-		ret = get_controller_from_name(map->cgx_names[i], &controller);
+	for (i = 0; i < map->in_len; i++) {
+		ret = get_controller_from_name(map->in_names[i], &controller);
 		if (ret)
 			goto err;
 
-		if (map->cgx_values[i] == NULL) {
+		if (map->in_values[i] == NULL) {
 			/* attempt to extract the value from the name */
-			ret = get_value_from_name(map->cgx_names[i],
-						  &map->cgx_values[i]);
+			ret = get_value_from_name(map->in_names[i],
+						  &map->in_values[i]);
 			if (ret)
 				goto err;
 		}
@@ -119,10 +121,17 @@ int cgroup_map_convert(struct cgroup_name_map * const map)
 		if (ret)
 			goto err;
 
-		if (ctrl_version == map->cgx_version) {
+		if (map->in_version == CGROUP_DISK ||
+		    map->in_version == CGROUP_UNK)
+			in_version = ctrl_version;
+		if (map->out_version == CGROUP_DISK ||
+		    map->out_version == CGROUP_UNK)
+			out_version = ctrl_version;
+
+		if (in_version == out_version) {
 			/* No conversion necessary.  Use the setting as is */
-			ret = cgroup_map_insert_disk_name_value(
-				map, map->cgx_names[i], map->cgx_values[i]);
+			ret = cgroup_map_insert_out_name_value(
+				map, map->in_names[i], map->in_values[i]);
 			if (ret)
 				goto err;
 
@@ -135,14 +144,14 @@ int cgroup_map_convert(struct cgroup_name_map * const map)
 		/* the versions don't match.  we need to convert */
 		if (converted_cpu == false && strcmp(controller, "cpu") == 0) {
 			converted_cpu = true;
-			ret = cgroup_cpu_convert(map, ctrl_version);
+			ret = cgroup_cpu_convert(map, out_version);
 			if (ret)
 				goto err;
 		}
 		else if (converted_cpuset == false &&
 			 strcmp(controller, "cpuset") == 0) {
 			converted_cpuset = true;
-			ret = cgroup_cpuset_convert(map, ctrl_version);
+			ret = cgroup_cpuset_convert(map, out_version);
 			if (ret)
 				goto err;
 		}
@@ -152,134 +161,134 @@ err:
 	return ret;
 }
 
-void cgroup_map_free_cgx(struct cgroup_name_map * const map)
+void cgroup_map_free_in(struct cgroup_name_map * const map)
 {
 	int i;
 
-	for (i = 0; i < map->cgx_len; i++) {
-		if (map->cgx_names[i] != NULL)
-			free(map->cgx_names[i]);
-		if (map->cgx_values[i] != NULL)
-			free(map->cgx_values[i]);
+	for (i = 0; i < map->in_len; i++) {
+		if (map->in_names[i] != NULL)
+			free(map->in_names[i]);
+		if (map->in_values[i] != NULL)
+			free(map->in_values[i]);
 	}
 
-	map->cgx_len = 0;
+	map->in_len = 0;
 }
 
-void cgroup_map_free_disk(struct cgroup_name_map * const map)
+void cgroup_map_free_out(struct cgroup_name_map * const map)
 {
 	int i;
 
-	for (i = 0; i < map->disk_len; i++) {
-		if (map->disk_names[i] != NULL)
-			free(map->disk_names[i]);
-		if (map->disk_values[i] != NULL)
-			free(map->disk_values[i]);
+	for (i = 0; i < map->out_len; i++) {
+		if (map->out_names[i] != NULL)
+			free(map->out_names[i]);
+		if (map->out_values[i] != NULL)
+			free(map->out_values[i]);
 	}
 
-	map->disk_len = 0;
+	map->out_len = 0;
 }
 
 void cgroup_map_free(struct cgroup_name_map * const map)
 {
-	cgroup_map_free_cgx(map);
-	cgroup_map_free_disk(map);
+	cgroup_map_free_in(map);
+	cgroup_map_free_out(map);
 }
 
-int cgroup_map_insert_cgx_name_value(struct cgroup_name_map * const map,
-				     const char * const cgx_name,
-				     const char * const cgx_value)
+int cgroup_map_insert_in_name_value(struct cgroup_name_map * const map,
+				    const char * const in_name,
+				    const char * const in_value)
 {
 	int ret;
 
-	map->cgx_names = reallocarray(map->cgx_names, sizeof(char *),
-				      map->cgx_len + 1);
-	if (map->cgx_names == NULL) {
+	map->in_names = reallocarray(map->in_names, sizeof(char *),
+				      map->in_len + 1);
+	if (map->in_names == NULL) {
 		ret = ECGOTHER;
-		goto delete_cgx;
+		goto delete_in;
 	}
 
-	map->cgx_values = reallocarray(map->cgx_values, sizeof(char *),
-				       map->cgx_len + 1);
-	if (map->cgx_values == NULL) {
+	map->in_values = reallocarray(map->in_values, sizeof(char *),
+				       map->in_len + 1);
+	if (map->in_values == NULL) {
 		ret = ECGOTHER;
-		goto delete_cgx;
+		goto delete_in;
 	}
 
-	map->cgx_names[map->cgx_len] = NULL;
-	if (cgx_name) {
-		map->cgx_names[map->cgx_len] = strdup(cgx_name);
-		if (map->cgx_names[map->cgx_len] == NULL) {
+	map->in_names[map->in_len] = NULL;
+	if (in_name) {
+		map->in_names[map->in_len] = strdup(in_name);
+		if (map->in_names[map->in_len] == NULL) {
 			ret = ECGOTHER;
-			goto delete_cgx;
+			goto delete_in;
 		}
 	}
 
-	map->cgx_values[map->cgx_len] = NULL;
-	if (cgx_value) {
-		map->cgx_values[map->cgx_len] = strdup(cgx_value);
-		if (map->cgx_values[map->cgx_len] == NULL) {
+	map->in_values[map->in_len] = NULL;
+	if (in_value) {
+		map->in_values[map->in_len] = strdup(in_value);
+		if (map->in_values[map->in_len] == NULL) {
 			ret = ECGOTHER;
-			goto delete_cgx;
+			goto delete_in;
 		}
 	}
 
-	map->cgx_len++;
+	map->in_len++;
 	return 0;
 
-delete_cgx:
+delete_in:
 	/* one of the reallocs failed.  delete both arrays and reset the
 	 * length to zero
 	 */
-	cgroup_map_free_cgx(map);
+	cgroup_map_free_in(map);
 	return ret;
 }
 
-int cgroup_map_insert_disk_name_value(struct cgroup_name_map * const map,
-				      const char * const disk_name,
-				      const char * const disk_value)
+int cgroup_map_insert_out_name_value(struct cgroup_name_map * const map,
+				     const char * const out_name,
+				     const char * const out_value)
 {
 	int ret;
 
-	map->disk_names = reallocarray(map->disk_names, sizeof(char *),
-				      map->disk_len + 1);
-	if (map->disk_names == NULL) {
+	map->out_names = reallocarray(map->out_names, sizeof(char *),
+				      map->out_len + 1);
+	if (map->out_names == NULL) {
 		ret = ECGOTHER;
-		goto delete_disk;
+		goto delete_out;
 	}
 
-	map->disk_values = reallocarray(map->disk_values, sizeof(char *),
-				        map->disk_len + 1);
-	if (map->disk_values == NULL) {
+	map->out_values = reallocarray(map->out_values, sizeof(char *),
+				       map->out_len + 1);
+	if (map->out_values == NULL) {
 		ret = ECGOTHER;
-		goto delete_disk;
+		goto delete_out;
 	}
 
-	map->disk_names[map->disk_len] = NULL;
-	if (disk_name) {
-		map->disk_names[map->disk_len] = strdup(disk_name);
-		if (map->disk_names[map->disk_len] == NULL) {
+	map->out_names[map->out_len] = NULL;
+	if (out_name) {
+		map->out_names[map->out_len] = strdup(out_name);
+		if (map->out_names[map->out_len] == NULL) {
 			ret = ECGOTHER;
-			goto delete_disk;
+			goto delete_out;
 		}
 	}
 
-	map->disk_values[map->disk_len] = NULL;
-	if (disk_value) {
-		map->disk_values[map->disk_len] = strdup(disk_value);
-		if (map->disk_values[map->disk_len] == NULL) {
+	map->out_values[map->out_len] = NULL;
+	if (out_value) {
+		map->out_values[map->out_len] = strdup(out_value);
+		if (map->out_values[map->out_len] == NULL) {
 			ret = ECGOTHER;
-			goto delete_disk;
+			goto delete_out;
 		}
 	}
 
-	map->disk_len++;
+	map->out_len++;
 	return 0;
 
-delete_disk:
+delete_out:
 	/* one of the reallocs failed.  delete both arrays and reset the
 	 * length to zero
 	 */
-	cgroup_map_free_disk(map);
+	cgroup_map_free_out(map);
 	return ret;
 }

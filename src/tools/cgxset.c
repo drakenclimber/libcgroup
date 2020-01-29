@@ -98,7 +98,7 @@ static int process_r_flag(struct cgroup_name_map * const map,
 	}
 
 	/* We will extract the values field later */
-	ret = cgroup_map_insert_cgx_name_value(map, in_name, NULL);
+	ret = cgroup_map_insert_in_name_value(map, in_name, NULL);
 	if (ret)
 		return ret;
 
@@ -113,7 +113,8 @@ static int parse_cgset_opts(int argc, char *argv[],
 	int c, i, ret;
 	char *tmp;
 
-	map.cgx_version = args_version;
+	map.in_version = args_version;
+	map.out_version = CGROUP_DISK;
 
 	ret = cgroup_append_to_argv(cgset_argc, cgset_argv, CGSET);
 	if (ret)
@@ -157,13 +158,13 @@ static int parse_cgset_opts(int argc, char *argv[],
 	if (ret)
 		goto err;
 
-	for (i = 0; i < map.disk_len; i++) {
+	for (i = 0; i < map.out_len; i++) {
 		ret = cgroup_append_to_argv(cgset_argc, cgset_argv, "-r");
 		if (ret)
 			goto err;
 
 		ret = cgroup_append_to_argv(cgset_argc, cgset_argv,
-					    map.disk_names[i]);
+					    map.out_names[i]);
 		if (ret)
 			goto err;
 	}

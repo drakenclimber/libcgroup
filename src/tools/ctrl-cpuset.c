@@ -34,7 +34,7 @@ static int v1_exclusive_to_v2(struct cgroup_name_map * const map,
 		}
 	}
 
-	ret = cgroup_map_insert_disk_name_value(map, cpuset_cpus_partition,
+	ret = cgroup_map_insert_out_name_value(map, cpuset_cpus_partition,
 						partition_str);
 
 out:
@@ -60,7 +60,7 @@ static int v2_partition_to_v1(struct cgroup_name_map * const map,
 		}
 	}
 
-	ret = cgroup_map_insert_disk_name_value(map, cpuset_cpu_exclusive,
+	ret = cgroup_map_insert_out_name_value(map, cpuset_cpu_exclusive,
 						exclusive_str);
 
 out:
@@ -74,9 +74,9 @@ static int v1_to_v2(struct cgroup_name_map * const map)
 	 * mapping to cpuset cgroup v2 settings.  If/When this no longe
 	 * becomes the case, we can make this function smarter.
 	 */
-	for (i = 0; i < map->cgx_len; i++) {
-		if (strcmp(map->cgx_names[i], cpuset_cpu_exclusive) == 0)
-			ret = v1_exclusive_to_v2(map, map->cgx_values[i]);
+	for (i = 0; i < map->in_len; i++) {
+		if (strcmp(map->in_names[i], cpuset_cpu_exclusive) == 0)
+			ret = v1_exclusive_to_v2(map, map->in_values[i]);
 		if (ret)
 			goto out;
 	}
@@ -93,9 +93,9 @@ static int v2_to_v1(struct cgroup_name_map * const map)
 	 * mapping to cpuset cgroup v2 settings.  If/When this no longe
 	 * becomes the case, we can make this function smarter.
 	 */
-	for (i = 0; i < map->cgx_len; i++) {
-		if (strcmp(map->cgx_names[i], cpuset_cpus_partition) == 0)
-			ret = v2_partition_to_v1(map, map->cgx_values[i]);
+	for (i = 0; i < map->in_len; i++) {
+		if (strcmp(map->in_names[i], cpuset_cpus_partition) == 0)
+			ret = v2_partition_to_v1(map, map->in_values[i]);
 		if (ret)
 			goto out;
 	}
@@ -105,9 +105,9 @@ out:
 }
 
 int cgroup_cpuset_convert(struct cgroup_name_map * const map,
-			  enum cg_version_t ctrl_version)
+			  enum cg_version_t out_version)
 {
-	switch (ctrl_version) {
+	switch (out_version) {
 	case CGROUP_V1:
 		return v2_to_v1(map);
 	case CGROUP_V2:

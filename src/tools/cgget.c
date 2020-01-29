@@ -120,7 +120,7 @@ static int display_record(char *name,
 			ind = 1;
 	}
 
-	ret = cgroup_map_insert_cgx_name_value(map, name, value);
+	ret = cgroup_map_insert_in_name_value(map, name, value);
 	if (ret != 0)
 		goto end;
 
@@ -343,7 +343,8 @@ int cgget_main(int argc, char *argv[], enum cg_version_t version)
 	int mode = MODE_SHOW_NAMES | MODE_SHOW_HEADERS;
 
 	struct cgroup_name_map map = {0};
-	map.cgx_version = version;
+	map.in_version = CGROUP_DISK;
+	map.out_version = version;
 
 	/* No parameter on input? */
 	if (argc < 2) {
@@ -485,9 +486,9 @@ int cgget_main(int argc, char *argv[], enum cg_version_t version)
 	/* Convert the map to the format requested by the user */
 	ret |= cgroup_map_convert(&map);
 
-	for (i = 0; i < map.disk_len; i++) {
+	for (i = 0; i < map.out_len; i++) {
 		fprintf(stdout, "map[%d] %s : %s\n",
-			i, map.disk_names[i], map.disk_values[i]);
+			i, map.out_names[i], map.out_values[i]);
 	}
 
 err:
