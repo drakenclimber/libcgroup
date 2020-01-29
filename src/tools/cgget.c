@@ -58,6 +58,19 @@ static void usage(int status, const char *program_name)
 		"parameter names\n");
 }
 
+static int display_map(struct cgroup_name_map * const map,
+		       int mode)
+{
+	int i, ret = 0;
+
+	for (i = 0; i < map->out_len; i++) {
+		if (mode & MODE_SHOW_NAMES)
+			printf("%s: %s", map->out_names[i], map->out_values[i]);
+	}
+
+	return ret;
+}
+
 static int display_record(char *name,
 	struct cgroup_controller *group_controller,
 	const char *group_name, const char *program_name, int mode,
@@ -485,6 +498,7 @@ int cgget_main(int argc, char *argv[], enum cg_version_t version)
 
 	/* Convert the map to the format requested by the user */
 	ret |= cgroup_map_convert(&map);
+	ret |= display_map(&map, mode);
 
 	for (i = 0; i < map.out_len; i++) {
 		fprintf(stdout, "map[%d] %s : %s\n",
