@@ -7,5 +7,7 @@ cgexec
 cgget
 cgset
 cgsnapshot
+cgxget
+cgxset
 lscgroup
 lssubsys

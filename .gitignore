@@ -5,6 +5,7 @@ patches/*
 *.gcda
 *.gcno
 *.gcov
+*.swp
 stamp-*
 *.cache
 .deps/
