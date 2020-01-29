@@ -74,7 +74,6 @@ static int display_map(struct cgroup_name_map * const map,
 static int display_record(char *name,
 	struct cgroup_controller *group_controller,
 	const char *group_name, const char *program_name, int mode,
-	//enum cg_version_t version)
 	struct cgroup_name_map * const map)
 {
 	int ret = 0;
@@ -111,7 +110,7 @@ static int display_record(char *name,
 	/* read iteratively the whole value  */
 	while ((ret = cgroup_read_value_next(&handle, line, LL_MAX)) == 0) {
 		if (ind == 1) {
-			value = reallocarray(value, sizeof(char), strlen(value) + 1);
+			value = reallocarray(value, sizeof(char), strlen(value) + 2);
 			if (value == NULL)
 				goto end;
 
@@ -120,7 +119,7 @@ static int display_record(char *name,
 			printf("\t");
 		}
 
-		value = reallocarray(value, sizeof(char), strlen(value) + strlen(line));
+		value = reallocarray(value, sizeof(char), strlen(value) + strlen(line) + 1);
 		if (value == NULL)
 			goto end;
 		value = strcat(value, line);
