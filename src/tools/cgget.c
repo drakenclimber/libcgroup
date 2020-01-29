@@ -202,6 +202,7 @@ static int display_name_values(char **names, const char* group_name,
 			goto err;
 		i++;
 	}
+
 err:
 	if (controller)
 		free(controller);
@@ -341,7 +342,7 @@ int cgget_main(int argc, char *argv[], enum cg_version_t version)
 
 	int mode = MODE_SHOW_NAMES | MODE_SHOW_HEADERS;
 
-	struct cgroup_name_map map;
+	struct cgroup_name_map map = {0};
 	map.cgx_version = version;
 
 	/* No parameter on input? */
@@ -475,10 +476,18 @@ int cgget_main(int argc, char *argv[], enum cg_version_t version)
 			cgroup_list[i]->path, names, mode, argv[0], &map);
 	}
 
-	/* Parse control groups and print them .*/
+	/* Parse control groups */
 	for (i = optind; i < argc; i++) {
 		ret |= display_values(controllers, capacity,
 			argv[i], names, mode, argv[0], &map);
+	}
+
+	/* Convert the map to the format requested by the user */
+	ret |= cgroup_map_convert(&map);
+
+	for (i = 0; i < map.disk_len; i++) {
+		fprintf(stdout, "map[%d] %s : %s\n",
+			i, map.disk_names[i], map.disk_values[i]);
 	}
 
 err:
@@ -495,6 +504,7 @@ err_free:
 	free(cgroup_list);
 	free(controllers);
 	free(names);
+	cgroup_map_free(&map);
 
 	return result;
 }
