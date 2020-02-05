@@ -78,6 +78,13 @@ __BEGIN_DECLS
 #define max(x,y) ((y)<(x)?(x):(y))
 #define min(x,y) ((y)>(x)?(x):(y))
 
+enum cg_version_t {
+	CGROUP_UNK = 0,
+	CGROUP_V1,
+	CGROUP_V2,
+	CGROUP_DISK = 0xFF,
+};
+
 struct control_value {
 	char name[FILENAME_MAX];
 	char value[CG_VALUE_MAX];
@@ -89,6 +96,7 @@ struct cgroup_controller {
 	struct control_value *values[CG_NV_MAX];
 	struct cgroup *cgroup;
 	int index;
+	enum cg_version_t version;
 };
 
 struct cgroup {
@@ -107,13 +115,6 @@ struct cgroup {
 struct cg_mount_point {
 	char path[FILENAME_MAX];
 	struct cg_mount_point *next;
-};
-
-enum cg_version_t {
-	CGROUP_UNK = 0,
-	CGROUP_V1,
-	CGROUP_V2,
-	CGROUP_DISK = 0xFF,
 };
 
 struct cg_mount_table_s {
@@ -218,7 +219,8 @@ int cgroup_get_uid_gid_from_procfs(pid_t pid, uid_t *euid, gid_t *egid);
 int cgroup_get_procname_from_procfs(pid_t pid, char **procname);
 int cg_mkdir_p(const char *path);
 struct cgroup *create_cgroup_from_name_value_pairs(const char *name,
-		struct control_value *name_value, int nv_number);
+		struct control_value *name_value, int nv_number,
+		enum cg_version_t version);
 void init_cgroup_table(struct cgroup *cgroups, size_t count);
 
 /*

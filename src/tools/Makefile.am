@@ -31,7 +31,9 @@ cgcreate_SOURCES = cgcreate.c tools-common.c tools-common.h
 cgcreate_LIBS = $(CODE_COVERAGE_LIBS)
 cgcreate_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 
-cgset_SOURCES = cgset.c tools-common.c tools-common.h
+cgset_SOURCES = cgset.c cgset-main.c tools-common.c tools-common.h \
+	abstraction-common.c abstraction-common.h \
+	ctrl-cpu.c ctrl-cpuset.c
 cgset_LIBS = $(CODE_COVERAGE_LIBS)
 cgset_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 
@@ -72,7 +74,7 @@ cgxget_SOURCES = cgxget.c cgget.c \
 cgxget_LIBS = $(CODE_COVERAGE_LIBS)
 cgxget_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 
-cgxset_SOURCES = cgxset.c cgset.h \
+cgxset_SOURCES = cgxset.c cgset.c \
 	tools-common.c tools-common.h \
 	abstraction-common.c abstraction-common.h \
 	ctrl-cpu.c ctrl-cpuset.c

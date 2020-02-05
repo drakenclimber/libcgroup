@@ -222,8 +222,7 @@ int main(int argc, char *argv[])
 
 	/* reset the getopt index back to the start */
 	optind = 0;
-	//result = cgset_main(cgset_argc, cgset_argv, NULL, NULL, &i);
-	result = ECGINVAL;
+	result = cgset_main(cgset_argc, cgset_argv, version);
 err:
 	return (result < 0) ? -result : result;
 }

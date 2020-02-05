@@ -33,9 +33,15 @@ int cgroup_map_insert_out_name_value(struct cgroup_name_map * const map,
 				     const char * const out_name,
 				     const char * const out_value);
 
+int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
+			  enum cg_version_t out_version,
+			  const struct cgroup * const in_cgroup);
+
 /* ctrl-cpu.c functions */
 int cgroup_cpu_convert(struct cgroup_name_map * const map,
 		       enum cg_version_t out_version);
+int cgroup_convert_cpu(struct cgroup_controller * const out_cgc,
+		       const struct cgroup_controller * const in_cgc);
 
 /* ctrl-cpuset.c functions */
 int cgroup_cpuset_convert(struct cgroup_name_map * const map,

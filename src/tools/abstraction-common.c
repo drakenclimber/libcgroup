@@ -161,6 +161,38 @@ err:
 	return ret;
 }
 
+int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
+			  enum cg_version_t out_version,
+			  const struct cgroup * const in_cgroup)
+{
+	struct cgroup_controller *cgc;
+	int ret = 0;
+	int i;
+
+	for (i = 0; i < in_cgroup->index; i++) {
+		fprintf(stdout, "controller[%d] = %s\n", i, in_cgroup->controller[i]->name);
+
+		cgc = cgroup_add_controller(out_cgroup,
+					    in_cgroup->controller[i]->name);
+		if (cgc == NULL) {
+			ret = ECGFAIL;
+			goto out;
+		}
+
+		cgc->version = out_version;
+
+		if (strcmp(in_cgroup->controller[i]->name, "cpu") == 0) {
+			ret = cgroup_convert_cpu(cgc,
+						 in_cgroup->controller[i]);
+			if (ret)
+				goto out;
+		}
+	}
+
+out:
+	return ret;
+}
+
 void cgroup_map_free_in(struct cgroup_name_map * const map)
 {
 	int i;

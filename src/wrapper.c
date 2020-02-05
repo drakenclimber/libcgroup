@@ -576,7 +576,8 @@ int cgroup_set_value_bool(struct cgroup_controller *controller,
 }
 
 struct cgroup *create_cgroup_from_name_value_pairs(const char *name,
-		struct control_value *name_value, int nv_number)
+		struct control_value *name_value, int nv_number,
+		enum cg_version_t version)
 {
 	struct cgroup *src_cgroup;
 	struct cgroup_controller *cgc;
@@ -617,6 +618,8 @@ struct cgroup *create_cgroup_from_name_value_pairs(const char *name,
 						con);
 				goto scgroup_err;
 			}
+
+			cgc->version = version;
 		}
 
 		/* add name-value pair to this controller */

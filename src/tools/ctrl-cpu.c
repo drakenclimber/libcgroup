@@ -138,3 +138,46 @@ int cgroup_cpu_convert(struct cgroup_name_map * const map,
 		return ECGFAIL;
 	}
 }
+
+static int v1_to_v2_2(struct cgroup_controller * const out_cgc,
+		    const struct cgroup_controller * const in_cgc)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+static int v2_to_v1_2(struct cgroup_controller * const out_cgc,
+		    const struct cgroup_controller * const in_cgc)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+int cgroup_convert_cpu(struct cgroup_controller * const out_cgc,
+		       const struct cgroup_controller * const in_cgc)
+{
+	int ret;
+
+	if (out_cgc->version == CGROUP_UNK ||
+	    out_cgc->version == CGROUP_DISK)
+	{
+		ret = cgroup_get_controller_version(out_cgc->name,
+						    &out_cgc->version);
+		if (ret)
+			goto out;
+	}
+
+	switch (out_cgc->version) {
+	case CGROUP_V1:
+		ret = v2_to_v1_2(out_cgc, in_cgc);
+	case CGROUP_V2:
+		return v1_to_v2_2(out_cgc, in_cgc);
+	default:
+		return ECGFAIL;
+	}
+
+out:
+	return ret;
+}

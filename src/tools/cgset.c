@@ -8,6 +8,7 @@
 #include <getopt.h>
 
 #include "tools-common.h"
+#include "abstraction-common.h"
 
 #define FL_RULES	1
 #define FL_COPY		2
@@ -73,7 +74,7 @@ static void usage(int status, const char *program_name)
 		"parameters will be copied\n");
 }
 
-int main(int argc, char *argv[])
+int cgset_main(int argc, char *argv[], enum cg_version_t version)
 {
 	int ret = 0;
 	int c;
@@ -84,6 +85,7 @@ int main(int argc, char *argv[])
 	int nv_max = 0;
 
 	char src_cg_path[FILENAME_MAX];
+	struct cgroup *cnvt_cgroup;
 	struct cgroup *src_cgroup;
 	struct cgroup *cgroup;
 
@@ -198,7 +200,7 @@ int main(int argc, char *argv[])
 	/* copy the name-value pairs from -r options */
 	if ((flags & FL_RULES) != 0) {
 		src_cgroup = create_cgroup_from_name_value_pairs(
-			"tmp", name_value, nv_number);
+			"tmp", name_value, nv_number, version);
 		if (src_cgroup == NULL)
 			goto err;
 	}
@@ -228,6 +230,21 @@ int main(int argc, char *argv[])
 			goto cgroup_free_err;
 		}
 
+		cnvt_cgroup = cgroup_new_cgroup(argv[optind]);
+		if (!cnvt_cgroup) {
+			ret = ECGFAIL;
+			fprintf(stderr, "%s: can't add new cgroup: %s\n",
+				argv[0], cgroup_strerror(ret));
+			goto cgroup_free_err;
+		}
+
+		ret = cgroup_convert_cgroup(cnvt_cgroup, CGROUP_DISK, cgroup);
+		if (ret) {
+			fprintf(stderr, "%s: cgroup convert error: %s \n",
+				argv[0], cgroup_strerror(ret));
+			goto cgroup_free_err;
+		}
+
 		/* modify cgroup based on values of the new one */
 		ret = cgroup_modify_cgroup(cgroup);
 		if (ret) {
@@ -241,6 +258,8 @@ int main(int argc, char *argv[])
 	}
 
 cgroup_free_err:
+	if (cnvt_cgroup)
+		cgroup_free(&cnvt_cgroup);
 	if (cgroup)
 		cgroup_free(&cgroup);
 	cgroup_free(&src_cgroup);
