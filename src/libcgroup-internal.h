@@ -87,6 +87,7 @@ enum cg_version_t {
 	CGROUP_UNK = 0,
 	CGROUP_V1,
 	CGROUP_V2,
+	CGROUP_DISK = 0xFF,
 };
 
 struct control_value {
@@ -361,6 +362,17 @@ int cgroup_fill_cgc(struct dirent *ctrl_dir, struct cgroup *cgroup,
  * @return 1 if mounted, 0 if not mounted
  */
 int cgroup_test_subsys_mounted(const char *ctrl_name);
+
+/**
+ * Create a duplicate copy of values under the specified controller
+ *
+ * @dst: Destination controller
+ * @src: Source controller from which values will be copied to dst
+ *
+ * @return 0 on a successful copy, ECGOTHER if the copy failed
+ */
+int cgroup_copy_controller_values(struct cgroup_controller *dst,
+				  struct cgroup_controller *src);
 
 /**
  * Functions that are defined as STATIC can be placed within the UNIT_TEST
