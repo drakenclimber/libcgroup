@@ -83,6 +83,12 @@ __BEGIN_DECLS
 #define max(x,y) ((y)<(x)?(x):(y))
 #define min(x,y) ((y)>(x)?(x):(y))
 
+enum cg_version_t {
+	CGROUP_UNK = 0,
+	CGROUP_V1,
+	CGROUP_V2,
+};
+
 struct control_value {
 	char name[FILENAME_MAX];
 	char value[CG_CONTROL_VALUE_MAX];
@@ -97,6 +103,7 @@ struct cgroup_controller {
 	struct control_value *values[CG_NV_MAX];
 	struct cgroup *cgroup;
 	int index;
+	enum cg_version_t version;
 };
 
 struct cgroup {
@@ -115,12 +122,6 @@ struct cgroup {
 struct cg_mount_point {
 	char path[FILENAME_MAX];
 	struct cg_mount_point *next;
-};
-
-enum cg_version_t {
-	CGROUP_UNK = 0,
-	CGROUP_V1,
-	CGROUP_V2,
 };
 
 struct cg_mount_table_s {
