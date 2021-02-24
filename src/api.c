@@ -2170,14 +2170,8 @@ err:
 
 }
 
-/**
- * @dst: Destination controller
- * @src: Source controller from which values will be copied to dst
- *
- * Create a duplicate copy of values under the specified controller
- */
-static int cgroup_copy_controller_values(struct cgroup_controller *dst,
-					struct cgroup_controller *src)
+int cgroup_copy_controller_values(struct cgroup_controller *dst,
+				  struct cgroup_controller *src)
 {
 	int i, ret = 0;
 
