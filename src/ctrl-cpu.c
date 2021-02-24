@@ -74,6 +74,46 @@ out:
 	return ret;
 }
 
+STATIC int v2_weight_to_v1(struct cgroup_controller * const dst_cgc,
+			   const char * const weight_val)
+{
+#define SHARES_STR_LEN 20
+
+	long int shares;
+	char *shares_str = NULL;
+	int ret = 0;
+
+	if (!weight_val)
+		return ECGINVAL;
+
+	if (strlen(weight_val) > 0) {
+		ret = cgroup_strtol(weight_val, 10, &shares);
+		if (ret)
+			goto out;
+
+		/* now scale from cpu.shares to cpu.weight */
+		shares = shares * DEFAULT_SHARES_VALUE / DEFAULT_WEIGHT_VALUE;
+
+		shares_str = calloc(sizeof(char), SHARES_STR_LEN);
+		ret = snprintf(shares_str, SHARES_STR_LEN, "%ld\n", shares);
+		if (ret == SHARES_STR_LEN) {
+			/* we ran out of room in the string. throw an error */
+			cgroup_err("Error: shares too large for string: %d\n",
+				   shares);
+			ret = ECGFAIL;
+			goto out;
+		}
+	}
+
+	ret = cgroup_add_value_string(dst_cgc, cpu_shares, shares_str);
+
+out:
+	if (shares_str)
+		free(shares_str);
+
+	return ret;
+}
+
 static int v1_to_v2(struct cgroup_controller * const out_cgc,
 		    const struct cgroup_controller * const in_cgc)
 {
@@ -119,7 +159,12 @@ static int v2_to_v1(struct cgroup_controller * const out_cgc,
 	 * the case, we can make this function smarter.
 	 */
 	for (i = 0; i < in_cgc->index; i++) {
-		/* todo - add conversions here */
+		if (strcmp(in_cgc->values[i]->name, cpu_weight) == 0) {
+			ret = v2_weight_to_v1(out_cgc,
+				in_cgc->values[i]->value);
+		}
+		if (ret)
+			goto out;
 	}
 
 	if (out_cgc->index == 0)

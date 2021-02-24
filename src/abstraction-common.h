@@ -77,6 +77,9 @@ int cgroup_convert_cpu(struct cgroup_controller * const out_cgc,
 #ifdef UNIT_TEST
 int v1_shares_to_v2(struct cgroup_controller * const dst_cgc,
 		    const char * const shares_val);
+
+int v2_weight_to_v1(struct cgroup_controller * const dst_cgc,
+		    const char * const weight_val);
 #endif /* UNIT_TEST */
 
 __END_DECLS
