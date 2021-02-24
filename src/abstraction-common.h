@@ -69,6 +69,16 @@ int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
 int cgroup_convert_cpu(struct cgroup_controller * const out_cgc,
 		       const struct cgroup_controller * const in_cgc);
 
+/**
+ * Functions that are defined as STATIC can be placed within the UNIT_TEST
+ * ifdef.  This will allow them to be included in the unit tests while
+ * remaining static in a normal libcgroup library build.
+ */
+#ifdef UNIT_TEST
+int v1_shares_to_v2(struct cgroup_controller * const dst_cgc,
+		    const char * const shares_val);
+#endif /* UNIT_TEST */
+
 __END_DECLS
 
 #endif /* __ABSTRACTION_COMMON */
