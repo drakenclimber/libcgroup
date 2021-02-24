@@ -135,6 +135,14 @@ int main(int argc, char *argv[])
 		exit(2);
 	}
 
+	/* Initialize libcg */
+	ret = cgroup_init();
+	if (ret) {
+		fprintf(stderr, "%s: libcgroup initialization failed: %s\n",
+			argv[0], cgroup_strerror(ret));
+		return ret;
+	}
+
 	memset(cgroup_list, 0, sizeof(cgroup_list));
 	while ((c = getopt_long(argc, argv, "+g:sh", longopts, NULL)) > 0) {
 		switch (c) {
@@ -163,15 +171,6 @@ int main(int argc, char *argv[])
 			exit(2);
 			break;
 		}
-	}
-
-
-	/* Initialize libcg */
-	ret = cgroup_init();
-	if (ret) {
-		fprintf(stderr, "%s: libcgroup initialization failed: %s\n",
-			argv[0], cgroup_strerror(ret));
-		return ret;
 	}
 
 	for (i = optind; i < argc; i++) {

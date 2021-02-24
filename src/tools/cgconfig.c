@@ -187,6 +187,13 @@ int main(int argc, char *argv[])
 		goto free_cgroup;
 	}
 
+	ret = cgroup_init();
+	if (ret) {
+		fprintf(stderr, "%s: libcgroup initialization failed: %s\n",
+			argv[0], cgroup_strerror(ret));
+		goto free_cgroup;
+	}
+
 	for (i = 0; i < cfg_files.count; i++) {
 		ret = cgroup_config_load_config(cfg_files.items[i]);
 		if (ret) {
