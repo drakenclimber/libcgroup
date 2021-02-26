@@ -56,6 +56,19 @@ int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
 			  const struct cgroup * const in_cgroup,
 			  enum cg_version_t in_version);
 
+/**
+ * Convert from one cpu controller version to another version
+ *
+ * @param out_cgc Destination controller
+ * @param in_cgc Source controller
+ *
+ * @return 0 on success
+ *         ECGFAIL conversion failed
+ *         ECGCONTROLLERNOTEQUAL incorrect controller version provided
+ */
+int cgroup_convert_cpu(struct cgroup_controller * const out_cgc,
+		       const struct cgroup_controller * const in_cgc);
+
 __END_DECLS
 
 #endif /* __ABSTRACTION_COMMON */

@@ -83,7 +83,12 @@ int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
 
 		cgc->version = out_version;
 
-		/* Controller conversions will go here */
+		if (strcmp(in_cgroup->controller[i]->name, "cpu") == 0) {
+			ret = cgroup_convert_cpu(cgc,
+						 in_cgroup->controller[i]);
+			if (ret)
+				goto out;
+		}
 	}
 
 out:
