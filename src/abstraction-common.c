@@ -58,3 +58,34 @@ int cgroup_strtol(const char * const in_str, int base,
 out:
 	return ret;
 }
+
+int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
+			  enum cg_version_t out_version,
+			  const struct cgroup * const in_cgroup,
+			  enum cg_version_t in_version)
+{
+	struct cgroup_controller *cgc;
+	int ret = 0;
+	int i;
+
+	for (i = 0; i < in_cgroup->index; i++) {
+		cgc = cgroup_add_controller(out_cgroup,
+					    in_cgroup->controller[i]->name);
+		if (cgc == NULL) {
+			ret = ECGFAIL;
+			goto out;
+		}
+
+		/* the user has overridden the version */
+		if (in_version == CGROUP_V1 || in_version == CGROUP_V2) {
+			in_cgroup->controller[i]->version = in_version;
+		}
+
+		cgc->version = out_version;
+
+		/* Controller conversions will go here */
+	}
+
+out:
+	return ret;
+}
