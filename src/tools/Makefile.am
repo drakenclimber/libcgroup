@@ -5,7 +5,7 @@ LDADD = $(top_builddir)/src/.libs/libcgroup.la -lpthread
 
 if WITH_TOOLS
 
-bin_PROGRAMS = cgexec cgclassify cgcreate cgset cgget cgxget cgdelete \
+bin_PROGRAMS = cgexec cgclassify cgcreate cgset cgxset cgget cgxget cgdelete \
 		lssubsys lscgroup cgsnapshot
 
 sbin_PROGRAMS = cgconfigparser cgclear
@@ -25,6 +25,10 @@ cgcreate_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 cgset_SOURCES = cgset.c tools-common.c tools-common.h
 cgset_LIBS = $(CODE_COVERAGE_LIBS)
 cgset_CFLAGS = $(CODE_COVERAGE_CFLAGS)
+
+cgxset_SOURCES = cgset.c tools-common.c tools-common.h
+cgxset_LIBS = $(CODE_COVERAGE_LIBS)
+cgxset_CFLAGS = $(CODE_COVERAGE_CFLAGS) -DCGXSET
 
 cgget_SOURCES = cgget.c tools-common.c tools-common.h
 cgget_LIBS = $(CODE_COVERAGE_LIBS)

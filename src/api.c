@@ -1892,7 +1892,8 @@ static int cg_set_control_value(char *path, const char *val)
  * @param controller The controller whose values are being updated
  */
 STATIC int cgroup_set_values_recursive(const char * const base,
-	const struct cgroup_controller * const controller)
+	const struct cgroup_controller * const controller,
+	bool check_dirty_flag)
 {
 	char *path = NULL;
 	int error = 0, ret, j;
@@ -1905,16 +1906,30 @@ STATIC int cgroup_set_values_recursive(const char * const base,
 			error = ECGOTHER;
 			goto err;
 		}
-		cgroup_dbg("setting %s to \"%s\", pathlen %d\n", path,
-			   controller->values[j]->value, ret);
+		cgroup_dbg("setting %s to \"%s\", pathlen %d, dirty %d\n", path,
+			   controller->values[j]->value, ret,
+			   controller->values[j]->dirty);
 		error = cg_set_control_value(path,
 				controller->values[j]->value);
+		cgroup_dbg("setting value returned %d\n", error);
 
 		free(path);
 		path = NULL;
 
-		if (error)
+		if (error && check_dirty_flag &&
+		    !controller->values[j]->dirty) {
+			/* we failed to set this value, but it wasn't dirty
+			 * so ignore it
+			 */
+			error = 0;
+			cgroup_dbg("%s:%d\n", __func__, __LINE__);
+			continue;
+		}
+
+		if (error) {
+			cgroup_dbg("%s:%d\n", __func__, __LINE__);
 			goto err;
+		}
 
 		controller->values[j]->dirty = false;
 	}
@@ -2142,7 +2157,8 @@ int cgroup_modify_cgroup(struct cgroup *cgroup)
 			continue;
 
 		error = cgroup_set_values_recursive(base,
-				cgroup->controller[i]);
+				cgroup->controller[i], true);
+		cgroup_dbg("set values recursive returned %d\n", error);
 		if (error)
 			goto err;
 	}
@@ -2387,7 +2403,7 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 			goto err;
 
 		error = cgroup_set_values_recursive(base,
-				cgroup->controller[k]);
+				cgroup->controller[k], false);
 		if (error)
 			goto err;
 
