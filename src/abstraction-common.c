@@ -60,16 +60,74 @@ out:
 	return ret;
 }
 
+static int convert_setting(struct cgroup_controller * const out_cgc,
+			   const struct control_value * const in_ctrl_val)
+{
+	const struct cgroup_abstraction_map *convert_tbl;
+	int tbl_sz = 0;
+	int ret = ECGINVAL;
+	int i;
+
+	switch (out_cgc->version) {
+	case CGROUP_V1:
+		convert_tbl = cgroup_v2_to_v1_map;
+		tbl_sz = cgroup_v2_to_v1_map_sz;
+		break;
+	case CGROUP_V2:
+		convert_tbl = cgroup_v1_to_v2_map;
+		tbl_sz = cgroup_v1_to_v2_map_sz;
+		break;
+	default:
+		ret = ECGFAIL;
+		goto out;
+	}
+
+	for (i = 0; i < tbl_sz; i++) {
+		if (strcmp(convert_tbl[i].in_setting, in_ctrl_val->name) == 0) {
+			ret = convert_tbl[i].cgroup_convert(out_cgc,
+					in_ctrl_val->value,
+					convert_tbl[i].out_setting,
+					convert_tbl[i].in_dflt,
+					convert_tbl[i].out_dflt);
+		}
+	}
+
+out:
+	return ret;
+}
+
+static int convert_controller(struct cgroup_controller * const out_cgc,
+			      const struct cgroup_controller * const in_cgc)
+{
+	int ret;
+	int i;
+
+
+	if (in_cgc->version == out_cgc->version) {
+		ret = cgroup_copy_controller_values(out_cgc, in_cgc);
+		/* regardless of success/failure, there's nothing more to do */
+		goto out;
+	}
+
+	for (i = 0; i < in_cgc->index; i++) {
+		ret = convert_setting(out_cgc, in_cgc->values[i]);
+		if (ret)
+			goto out;
+	}
+
+out:
+	return ret;
+
+}
+
 int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
 			  enum cg_version_t out_version,
 			  const struct cgroup * const in_cgroup,
 			  enum cg_version_t in_version)
 {
-	const struct cgroup_abstraction_map *convert_tbl;
 	struct cgroup_controller *cgc;
-	int tbl_sz = 0;
 	int ret = 0;
-	int i, j, k;
+	int i;
 
 	for (i = 0; i < in_cgroup->index; i++) {
 		cgc = cgroup_add_controller(out_cgroup,
@@ -94,40 +152,9 @@ int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
 				goto out;
 		}
 
-		if (in_version == cgc->version) {
-			ret = cgroup_copy_controller_values(cgc,
-				in_cgroup->controller[i]);
-			/* regardless of success/failure, there's nothing
-			 * more to do */
+		ret = convert_controller(cgc, in_cgroup->controller[i]);
+		if (ret)
 			goto out;
-		}
-
-		switch (cgc->version) {
-		case CGROUP_V1:
-			convert_tbl = cgroup_v2_to_v1_map;
-			tbl_sz = cgroup_v2_to_v1_map_sz;
-			break;
-		case CGROUP_V2:
-			convert_tbl = cgroup_v1_to_v2_map;
-			tbl_sz = cgroup_v1_to_v2_map_sz;
-			break;
-		default:
-			ret = ECGFAIL;
-			goto out;
-		}
-
-		for (j = 0; j < in_cgroup->controller[i]->index; j++) {
-			for (k = 0; k < tbl_sz; k++) {
-				if (strcmp(convert_tbl[k].in_setting,
-				    in_cgroup->controller[i]->values[j]->name) == 0) {
-					ret = convert_tbl[k].cgroup_convert(cgc,
-						in_cgroup->controller[i]->values[j]->value,
-						convert_tbl[k].out_setting,
-						convert_tbl[k].in_dflt,
-						convert_tbl[k].out_dflt);
-				}
-			}
-		}
 	}
 
 out:
