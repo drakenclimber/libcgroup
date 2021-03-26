@@ -56,31 +56,18 @@ int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
 			  const struct cgroup * const in_cgroup,
 			  enum cg_version_t in_version);
 
-/**
- * Convert from one cpu controller version to another version
+/** Convert an integer setting to another integer setting
  *
- * @param out_cgc Destination controller
- * @param in_cgc Source controller
- *
- * @return 0 on success
- *         ECGFAIL conversion failed
- *         ECGCONTROLLERNOTEQUAL incorrect controller version provided
+ * @param dst_cgc Destination cgroup controller
+ * @param in_value Contents of the input setting
+ * @param out_setting Destination cgroup setting
+ * @param in_dflt Default value of the input setting (used to scale the value)
+ * @param out_dflt Default value of the output setting (used to scale the value)
  */
-int cgroup_convert_cpu(struct cgroup_controller * const out_cgc,
-		       const struct cgroup_controller * const in_cgc);
-
-/**
- * Functions that are defined as STATIC can be placed within the UNIT_TEST
- * ifdef.  This will allow them to be included in the unit tests while
- * remaining static in a normal libcgroup library build.
- */
-#ifdef UNIT_TEST
-int v1_shares_to_v2(struct cgroup_controller * const dst_cgc,
-		    const char * const shares_val);
-
-int v2_weight_to_v1(struct cgroup_controller * const dst_cgc,
-		    const char * const weight_val);
-#endif /* UNIT_TEST */
+int cgroup_convert_int(struct cgroup_controller * const dst_cgc,
+		       const char * const in_value,
+		       const char * const out_setting,
+		       void *in_dflt, void *out_dflt);
 
 __END_DECLS
 
