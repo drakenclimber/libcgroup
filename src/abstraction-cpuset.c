@@ -1,5 +1,5 @@
 /**
- * Libcgroup abstraction map
+ * Libcgroup abstraction layer for the cpuset controller
  *
  * Copyright (c) 2021 Oracle and/or its affiliates.
  * Author: Tom Hromatka <tom.hromatka@oracle.com>
@@ -31,24 +31,37 @@
 #include "abstraction-common.h"
 #include "abstraction-map.h"
 
-const struct cgroup_abstraction_map cgroup_v1_to_v2_map[] = {
-	/* cpu */
-	{cgroup_convert_int, "cpu.shares", (void *)1024, "cpu.weight", (void *)100},
+static const char * const MEMBER = "member";
+static const char * const ROOT = "root";
 
-	/* cpuset */
-	{cgroup_convert_cpuset_to_partition, "cpuset.cpu_exclusive", NULL,
-		"cpuset.cpus.partition", NULL},
-};
-const int cgroup_v1_to_v2_map_sz = sizeof(cgroup_v1_to_v2_map) /
-				   sizeof(cgroup_v1_to_v2_map[0]);
+int cgroup_convert_cpuset_to_exclusive(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt)
+{
+	int ret;
 
-const struct cgroup_abstraction_map cgroup_v2_to_v1_map[] = {
-	/* cpu */
-	{cgroup_convert_int, "cpu.weight", (void *)100, "cpu.shares", (void *)1024},
+	if (strcmp(in_value, ROOT) == 0)
+		ret = cgroup_add_value_string(dst_cgc, out_setting, "1");
+	else
+		ret = cgroup_add_value_string(dst_cgc, out_setting, "0");
 
-	/* cpuset */
-	{cgroup_convert_cpuset_to_exclusive, "cpuset.cpus.partition", NULL,
-		"cpuset.cpu_exclusive", NULL},
-};
-const int cgroup_v2_to_v1_map_sz = sizeof(cgroup_v2_to_v1_map) /
-				   sizeof(cgroup_v2_to_v1_map[0]);
+	return ret;
+}
+
+int cgroup_convert_cpuset_to_partition(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt)
+{
+	int ret;
+
+	if (strcmp(in_value, "1") == 0)
+		ret = cgroup_add_value_string(dst_cgc, out_setting, ROOT);
+	else
+		ret = cgroup_add_value_string(dst_cgc, out_setting, MEMBER);
+
+	return ret;
+}
