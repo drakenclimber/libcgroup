@@ -39,6 +39,23 @@ __BEGIN_DECLS
 int cgroup_strtol(const char * const in_str, int base,
 		  long int * const out_value);
 
+/**
+ * Convert from one cgroup version to another version
+ *
+ * @param out_cgroup Destination cgroup
+ * @param out_version Destination cgroup version
+ * @param in_cgroup Source cgroup
+ * @param in_version Source cgroup version, only used if set to v1 or v2
+ *
+ * @return 0 on success
+ *         ECGFAIL conversion failed
+ *         ECGCONTROLLERNOTEQUAL incorrect controller version provided
+ */
+int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
+			  enum cg_version_t out_version,
+			  const struct cgroup * const in_cgroup,
+			  enum cg_version_t in_version);
+
 __END_DECLS
 
 #endif /* __ABSTRACTION_COMMON */
