@@ -138,4 +138,5 @@ CGROUP_0.43 {
 	cg_mount_table;
 	cg_mount_table_lock;
 	cgroup_get_controller_version;
+	cgroup_convert_cgroup;
 } CGROUP_0.42;
