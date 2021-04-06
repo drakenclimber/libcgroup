@@ -40,6 +40,10 @@ const struct cgroup_abstraction_map cgroup_v1_to_v2_map[] = {
 	/* cpuset */
 	{cgroup_convert_cpuset_to_partition, "cpuset.cpu_exclusive", NULL,
 		"cpuset.cpus.partition", NULL},
+	{cgroup_convert_name_only, "cpuset.effective_cpus", NULL,
+		"cpuset.cpus.effective", NULL},
+	{cgroup_convert_name_only, "cpuset.effective_mems", NULL,
+		"cpuset.mems.effective", NULL},
 };
 const int cgroup_v1_to_v2_map_sz = sizeof(cgroup_v1_to_v2_map) /
 				   sizeof(cgroup_v1_to_v2_map[0]);
@@ -53,6 +57,10 @@ const struct cgroup_abstraction_map cgroup_v2_to_v1_map[] = {
 	/* cpuset */
 	{cgroup_convert_cpuset_to_exclusive, "cpuset.cpus.partition", NULL,
 		"cpuset.cpu_exclusive", NULL},
+	{cgroup_convert_name_only, "cpuset.cpus.effective", NULL,
+		"cpuset.effective_cpus", NULL},
+	{cgroup_convert_name_only, "cpuset.mems.effective", NULL,
+		"cpuset.effective_mems", NULL},
 };
 const int cgroup_v2_to_v1_map_sz = sizeof(cgroup_v2_to_v1_map) /
 				   sizeof(cgroup_v2_to_v1_map[0]);
