@@ -205,3 +205,11 @@ out:
 
 	return ret;
 }
+
+int cgroup_convert_name_only(struct cgroup_controller * const dst_cgc,
+			     const char * const in_value,
+			     const char * const out_setting,
+			     void *in_dflt, void *out_dflt)
+{
+	return cgroup_add_value_string(dst_cgc, out_setting, in_value);
+}
