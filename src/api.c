@@ -2197,6 +2197,18 @@ int cgroup_copy_controller_values(struct cgroup_controller *dst,
 			dst_val->multiline_value = NULL;
 		}
 
+		if (src_val->prev_name) {
+			dst_val->prev_name =
+				strdup(src_val->prev_name);
+			if (!dst_val->prev_name) {
+				last_errno = errno;
+				ret = ECGOTHER;
+				goto err;
+			}
+		} else {
+			dst_val->prev_name = NULL;
+		}
+
 		dst_val->dirty = src_val->dirty;
 	}
 
@@ -2208,6 +2220,9 @@ err:
 		if (dst->values[i]) {
 			if (dst->values[i]->multiline_value)
 				free(dst->values[i]->multiline_value);
+
+			if (dst->values[i]->prev_name)
+				free(dst->values[i]->prev_name);
 
 			free(dst->values[i]);
 		}
