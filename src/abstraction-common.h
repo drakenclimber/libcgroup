@@ -98,6 +98,35 @@ int cgroup_convert_passthrough(struct cgroup_controller * const dst_cgc,
 			       const char * const out_setting,
 			       void *in_dflt, void *out_dflt);
 
+/* cpu */
+int cgroup_convert_cpu_nto1(struct cgroup_controller * const out_cgc,
+			    const struct cgroup_controller * const in_cgc);
+
+int cgroup_convert_cpu_quota_to_max(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt);
+
+int cgroup_convert_cpu_period_to_max(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt);
+
+int cgroup_convert_cpu_max_to_quota(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt);
+
+int cgroup_convert_cpu_max_to_period(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt);
+
+/* cpuset */
 int cgroup_convert_cpuset_to_exclusive(
 	struct cgroup_controller * const dst_cgc,
 	const char * const in_value,
@@ -109,8 +138,6 @@ int cgroup_convert_cpuset_to_partition(
 	const char * const in_value,
 	const char * const out_setting,
 	void *in_dflt, void *out_dflt);
-
-
 
 __END_DECLS
 

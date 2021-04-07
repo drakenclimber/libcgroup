@@ -2197,6 +2197,17 @@ int cgroup_copy_controller_values(struct cgroup_controller *dst,
 			dst_val->multiline_value = NULL;
 		}
 
+		if (src_val->prev_name) {
+			dst_val->prev_name = strdup(src_val->prev_name);
+			if (!dst_val->prev_name) {
+				last_errno = errno;
+				ret = ECGOTHER;
+				goto err;
+			}
+		} else {
+			dst_val->prev_name = NULL;
+		}
+
 		dst_val->dirty = src_val->dirty;
 	}
 
@@ -2208,6 +2219,8 @@ err:
 		if (dst->values[i]) {
 			if (dst->values[i]->multiline_value)
 				free(dst->values[i]->multiline_value);
+			if (dst->values[i]->prev_name)
+				free(dst->values[i]->prev_name);
 
 			free(dst->values[i]);
 		}
@@ -4620,11 +4633,13 @@ int cgroup_read_value_begin(const char *controller, const char *path,
 	if (!buffer || !handle)
 		return ECGINVAL;
 
+	fprintf(stdout, "path = %s, stat = %s, controller = %s\n", path, stat_path, controller);
 	if (!cg_build_path(path, stat_path, controller))
 		return ECGOTHER;
 
 	snprintf(stat_file, sizeof(stat_file), "%s/%s", stat_path,
 		name);
+	fprintf(stdout, "stat_file = %s\n", stat_file);
 	fp = fopen(stat_file, "re");
 	if (!fp) {
 		cgroup_warn("Warning: fopen failed\n");

@@ -96,6 +96,11 @@ struct control_value {
 
 	/* cgget uses this field for values that span multiple lines */
 	char *multiline_value;
+	/* the abstraction layer uses this layer when there's an N->1 or 1->N
+	 * relationship between cgroup v1 and v2 settings
+	 */
+	char *prev_name;
+
 	bool dirty;
 };
 
@@ -373,6 +378,16 @@ int cgroup_test_subsys_mounted(const char *ctrl_name);
  */
 int cgroup_copy_controller_values(struct cgroup_controller *dst,
 				  struct cgroup_controller *src);
+
+/**
+ * Remove a name/value pair from a controller.
+ *
+ * @param controller
+ * @param name Name of the name/value pair to be removed
+ * @return 0 on success.  ECGROUPNOTEXIST if name does not exist.
+ */
+int cgroup_remove_value(struct cgroup_controller * const controller,
+			const char * const name);
 
 /**
  * Functions that are defined as STATIC can be placed within the UNIT_TEST

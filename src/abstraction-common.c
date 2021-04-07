@@ -83,7 +83,9 @@ static int convert_setting(struct cgroup_controller * const out_cgc,
 	}
 
 	for (i = 0; i < tbl_sz; i++) {
-		if (strcmp(convert_tbl[i].in_setting, in_ctrl_val->name) == 0) {
+		if (strcmp(convert_tbl[i].in_setting, in_ctrl_val->name) == 0 &&
+		    (in_ctrl_val->prev_name == NULL ||
+		     strcmp(in_ctrl_val->prev_name, convert_tbl[i].out_setting) == 0)) {
 			ret = convert_tbl[i].cgroup_convert(out_cgc,
 					in_ctrl_val->value,
 					convert_tbl[i].out_setting,
@@ -110,6 +112,12 @@ static int convert_controller(struct cgroup_controller * const out_cgc,
 		/* regardless of success/failure, there's nothing more to do */
 		goto out;
 	}
+
+	if (strcmp(in_cgc->name, "cpu") == 0) {
+		ret = cgroup_convert_cpu_nto1(out_cgc, in_cgc);
+	}
+	if (ret)
+		goto out;
 
 	for (i = 0; i < in_cgc->index; i++) {
 		ret = convert_setting(out_cgc, in_cgc->values[i]);

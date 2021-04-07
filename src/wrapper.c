@@ -162,6 +162,8 @@ void cgroup_free_controllers(struct cgroup *cgroup)
 		for (j = 0; j < cgroup->controller[i]->index; j++) {
 			if (cgroup->controller[i]->values[j]->multiline_value)
 				free(cgroup->controller[i]->values[j]->multiline_value);
+			if (cgroup->controller[i]->values[j]->prev_name)
+				free(cgroup->controller[i]->values[j]->prev_name);
 
 			free(cgroup->controller[i]->values[j]);
 		}
@@ -184,6 +186,33 @@ void cgroup_free(struct cgroup **cgroup)
 	cgroup_free_controllers(cg);
 	free(cg);
 	*cgroup = NULL;
+}
+
+int cgroup_remove_value(struct cgroup_controller * const controller,
+			const char * const name)
+{
+	int i;
+
+	for (i = 0; i < controller->index; i++) {
+		if (strcmp(controller->values[i]->name, name) == 0) {
+			if (i == (controller->index - 1)) {
+				/* This is the last entry in the table.
+				 * There's nothing to move
+				 */
+				controller->index--;
+			} else {
+				memmove(controller->values[i],
+					controller->values[i + 1],
+					sizeof(struct control_value) *
+						(controller->index - i - 1));
+				controller->index--;
+			}
+
+			return 0;
+		}
+	}
+
+	return ECGROUPNOTEXIST;
 }
 
 int cgroup_add_value_string(struct cgroup_controller *controller,
