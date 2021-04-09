@@ -50,6 +50,8 @@ const struct cgroup_abstraction_map cgroup_v1_to_v2_map[] = {
 	/* memory */
 	{cgroup_convert_memory_limit_to_max, "memory.limit_in_bytes", NULL,
 		"memory.max", NULL},
+	{cgroup_convert_memory_limit_to_max, "memory.memsw.limit_in_bytes", NULL,
+		"memory.swap.max", NULL},
 };
 const int cgroup_v1_to_v2_map_sz = sizeof(cgroup_v1_to_v2_map) /
 				   sizeof(cgroup_v1_to_v2_map[0]);
@@ -73,6 +75,8 @@ const struct cgroup_abstraction_map cgroup_v2_to_v1_map[] = {
 	/* memory */
 	{cgroup_convert_memory_max_to_limit, "memory.max", NULL,
 		"memory.limit_in_bytes", NULL},
+	{cgroup_convert_memory_max_to_limit, "memory.swap.max", NULL,
+		"memory.memsw.limit_in_bytes", NULL},
 };
 const int cgroup_v2_to_v1_map_sz = sizeof(cgroup_v2_to_v1_map) /
 				   sizeof(cgroup_v2_to_v1_map[0]);
