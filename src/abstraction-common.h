@@ -70,6 +70,33 @@ int cgroup_convert_int(struct cgroup_controller * const dst_cgc,
 		       const char * const out_setting,
 		       void *in_dflt, void *out_dflt);
 
-__END_DECLS
+/* cpu */
+int cgroup_convert_cpu_nto1(struct cgroup_controller * const out_cgc,
+			    struct cgroup_controller * const in_cgc);
 
+int cgroup_convert_cpu_quota_to_max(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt);
+
+int cgroup_convert_cpu_period_to_max(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt);
+
+int cgroup_convert_cpu_max_to_quota(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt);
+
+int cgroup_convert_cpu_max_to_period(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt);
+
+__END_DECLS
 #endif /* __ABSTRACTION_COMMON */

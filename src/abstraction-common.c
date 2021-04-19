@@ -108,9 +108,9 @@ out:
 }
 
 static int convert_controller(struct cgroup_controller * const out_cgc,
-			      const struct cgroup_controller * const in_cgc)
+			      struct cgroup_controller * const in_cgc)
 {
-	int ret;
+	int ret = 0;
 	int i;
 
 
@@ -119,6 +119,12 @@ static int convert_controller(struct cgroup_controller * const out_cgc,
 		/* regardless of success/failure, there's nothing more to do */
 		goto out;
 	}
+
+	if (strcmp(in_cgc->name, "cpu") == 0) {
+		ret = cgroup_convert_cpu_nto1(out_cgc, in_cgc);
+	}
+	if (ret)
+		goto out;
 
 	for (i = 0; i < in_cgc->index; i++) {
 		ret = convert_setting(out_cgc, in_cgc->values[i]);
