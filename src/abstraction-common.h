@@ -98,5 +98,18 @@ int cgroup_convert_cpu_max_to_period(
 	const char * const out_setting,
 	void *in_dflt, void *out_dflt);
 
+/* cpuset */
+int cgroup_convert_cpuset_to_exclusive(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt);
+
+int cgroup_convert_cpuset_to_partition(
+	struct cgroup_controller * const dst_cgc,
+	const char * const in_value,
+	const char * const out_setting,
+	void *in_dflt, void *out_dflt);
+
 __END_DECLS
 #endif /* __ABSTRACTION_COMMON */

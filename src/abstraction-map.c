@@ -32,17 +32,27 @@
 #include "abstraction-map.h"
 
 const struct cgroup_abstraction_map cgroup_v1_to_v2_map[] = {
+	/* cpu */
 	{cgroup_convert_int, "cpu.shares", (void *)1024, "cpu.weight", (void *)100},
 	{cgroup_convert_cpu_quota_to_max, "cpu.cfs_quota_us", NULL, "cpu.max", NULL},
 	{cgroup_convert_cpu_period_to_max, "cpu.cfs_period_us", NULL, "cpu.max", NULL},
+
+	/* cpuset */
+	{cgroup_convert_cpuset_to_partition, "cpuset.cpu_exclusive", NULL,
+		"cpuset.cpus.partition", NULL},
 };
 const int cgroup_v1_to_v2_map_sz = sizeof(cgroup_v1_to_v2_map) /
 				   sizeof(cgroup_v1_to_v2_map[0]);
 
 const struct cgroup_abstraction_map cgroup_v2_to_v1_map[] = {
+	/* cpu */
 	{cgroup_convert_int, "cpu.weight", (void *)100, "cpu.shares", (void *)1024},
 	{cgroup_convert_cpu_max_to_quota, "cpu.max", NULL, "cpu.cfs_quota_us", NULL},
 	{cgroup_convert_cpu_max_to_period, "cpu.max", NULL, "cpu.cfs_period_us", NULL},
+
+	/* cpuset */
+	{cgroup_convert_cpuset_to_exclusive, "cpuset.cpus.partition", NULL,
+		"cpuset.cpu_exclusive", NULL},
 };
 const int cgroup_v2_to_v1_map_sz = sizeof(cgroup_v2_to_v1_map) /
 				   sizeof(cgroup_v2_to_v1_map[0]);
