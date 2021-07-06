@@ -11,6 +11,10 @@
 
 #include "tools-common.h"
 
+#ifdef CGXGET
+#include "abstraction-common.h"
+#endif
+
 #define MODE_SHOW_HEADERS		1
 #define MODE_SHOW_NAMES			2
 
@@ -18,6 +22,10 @@
 
 static struct option const long_options[] =
 {
+#ifdef CGXGET
+	{"v1", no_argument, NULL, '1'},
+	{"v2", no_argument, NULL, '2'},
+#endif
 	{"variable", required_argument, NULL, 'r'},
 	{"help", no_argument, NULL, 'h'},
 	{"all",  no_argument, NULL, 'a'},
@@ -38,17 +46,23 @@ static void usage(int status, const char *program_name)
 		"   or: %s [-nv] [-r <name>] -g <controllers>:<path> ...\n",
 		program_name, program_name);
 	printf("Print parameter(s) of given group(s).\n");
-	printf("  -a, --all			Print info about all relevant "\
-		"controllers\n");
-	printf("  -g <controllers>		Controller which info should "\
-		"be displayed\n");
-	printf("  -g <controllers>:<path>	Control group which info "\
-		"should be displayed\n");
+#ifdef CGXGET
+	printf("  -1, --v1			Provided parameters are in "
+	       "v1 format\n");
+	printf("  -2, --v2			Provided parameters are in "
+	       "v2 format\n");
+#endif
+	printf("  -a, --all			Print info about all relevant "
+	       "controllers\n");
+	printf("  -g <controllers>		Controller which info should "
+	       "be displayed\n");
+	printf("  -g <controllers>:<path>	Control group which info "
+	       "should be displayed\n");
 	printf("  -h, --help			Display this help\n");
 	printf("  -n				Do not print headers\n");
 	printf("  -r, --variable  <name>	Define parameter to display\n");
-	printf("  -v, --values-only		Print only values, not "\
-		"parameter names\n");
+	printf("  -v, --values-only		Print only values, not "
+	       "parameter names\n");
 }
 
 static int get_controller_from_name(const char * const name,
@@ -163,7 +177,9 @@ static int parse_r_flag(struct cgroup **cg_list[], int * const cg_list_len,
 	if (!cgc) {
 		cgc = cgroup_add_controller(cg, cntl_value_controller);
 		if (!cgc) {
-			ret = ECGCONTROLLERCREATEFAILED;
+			fprintf(stderr, "cgget: cannot find controller '%s'\n",
+				cntl_value_controller);
+			ret = ECGOTHER;
 			goto out;
 		}
 	}
@@ -382,9 +398,14 @@ static int parse_opt_args(int argc, char *argv[], struct cgroup **cg_list[],
 out:
 	return ret;
 }
-
+#ifdef CGXGET
+static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
+		      int * const cg_list_len, int * const mode,
+		      enum cg_version_t * const version)
+#else
 static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 		      int * const cg_list_len, int * const mode)
+#endif
 {
 	bool do_not_fill_controller = false;
 	bool fill_controller = false;
@@ -393,8 +414,13 @@ static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 	int c;
 
 	/* Parse arguments. */
+#ifdef CGXGET
+	while ((c = getopt_long(argc, argv, "r:hnvg:a12", long_options, NULL))
+		> 0) {
+#else
 	while ((c = getopt_long(argc, argv, "r:hnvg:a", long_options, NULL))
 		> 0) {
+#endif
 		switch (c) {
 		case 'h':
 			usage(0, argv[0]);
@@ -435,6 +461,14 @@ static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 			if (ret)
 				goto err;
 			break;
+#ifdef CGXGET
+		case '1':
+			*version = CGROUP_V1;
+			break;
+		case '2':
+			*version = CGROUP_V2;
+			break;
+#endif
 		default:
 			usage(1, argv[0]);
 			exit(1);
@@ -726,12 +760,57 @@ static void print_cgroups(struct cgroup *cg_list[], int cg_list_len, int mode)
 	}
 }
 
+#ifdef CGXGET
+int convert_cgroups(struct cgroup **cg_list[], int cg_list_len,
+		    enum cg_version_t in_version,
+		    enum cg_version_t out_version)
+{
+	struct cgroup **cg_converted_list;
+	int i = 0, j, ret = 0;
+
+	cg_converted_list = malloc(cg_list_len * sizeof(struct cgroup *));
+	if (cg_converted_list == NULL)
+		goto out;
+
+	for (i = 0; i < cg_list_len; i++) {
+		cg_converted_list[i] = cgroup_new_cgroup((*cg_list)[i]->name);
+		if (cg_converted_list[i] == NULL) {
+			ret = ECGCONTROLLERCREATEFAILED;
+			goto out;
+		}
+
+		ret = cgroup_convert_cgroup(cg_converted_list[i],
+			out_version, (*cg_list)[i], in_version);
+		if (ret)
+			goto out;
+	}
+
+out:
+	if (ret) {
+		/* the conversion failed */
+		for (j = 0; j < i; j++)
+			cgroup_free(&(cg_converted_list[i]));
+	} else {
+		/* the conversion succeeded.  free the old list */
+		for (i = 0; i < cg_list_len; i++)
+			cgroup_free(cg_list[i]);
+
+		*cg_list = cg_converted_list;
+	}
+
+	return ret;
+}
+#endif
+
 int main(int argc, char *argv[])
 {
 	struct cgroup **cg_list = NULL;
 	int cg_list_len = 0;
 	int ret = 0, i;
 	int mode = MODE_SHOW_NAMES | MODE_SHOW_HEADERS;
+#ifdef CGXGET
+	enum cg_version_t version = CGROUP_UNK;
+#endif
 
 	/* No parameter on input? */
 	if (argc < 2) {
@@ -746,13 +825,29 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
+#ifdef CGXGET
+	ret = parse_opts(argc, argv, &cg_list, &cg_list_len, &mode, &version);
+#else
 	ret = parse_opts(argc, argv, &cg_list, &cg_list_len, &mode);
+#endif
 	if (ret)
 		goto err;
+
+#ifdef CGXGET
+	ret = convert_cgroups(&cg_list, cg_list_len, version, CGROUP_DISK);
+	if (ret)
+		goto err;
+#endif
 
 	ret = get_values(cg_list, cg_list_len);
 	if (ret)
 		goto err;
+
+#ifdef CGXGET
+	ret = convert_cgroups(&cg_list, cg_list_len, CGROUP_DISK, version);
+	if (ret)
+		goto err;
+#endif
 
 	print_cgroups(cg_list, cg_list_len, mode);
 
