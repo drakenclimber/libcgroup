@@ -56,7 +56,7 @@ struct cgroup *cgroup_new_cgroup(const char *name)
 struct cgroup_controller *cgroup_add_controller(struct cgroup *cgroup,
 							const char *name)
 {
-	int i;
+	int i, ret;
 	struct cgroup_controller *controller;
 
 	if (!cgroup)
@@ -85,6 +85,15 @@ struct cgroup_controller *cgroup_add_controller(struct cgroup *cgroup,
 	strncpy(controller->name, name, sizeof(controller->name) - 1);
 	controller->cgroup = cgroup;
 	controller->index = 0;
+
+	ret = cgroup_get_controller_version(controller->name,
+					    &controller->version);
+	if (ret) {
+		cgroup_dbg("failed to get cgroup version for controller %s\n",
+			   controller->name);
+		free(controller);
+		return NULL;
+	}
 
 	cgroup->controller[cgroup->index] = controller;
 	cgroup->index++;
