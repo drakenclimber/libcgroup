@@ -17,7 +17,7 @@ libcgroup_la_SOURCES = parse.h parse.y lex.l api.c config.c \
 		       abstraction-common.c abstraction-common.h \
 		       abstraction-map.c abstraction-map.h \
 		       abstraction-cpu.c abstraction-cpuset.c \
-		       tools/cgget.c
+		       tools/cgget.c tools/cgset.c
 libcgroup_la_LIBADD = -lpthread $(CODE_COVERAGE_LIBS)
 libcgroup_la_CFLAGS = $(CODE_COVERAGE_CFLAGS) -DSTATIC=static -DLIBCG_LIB \
 		      -fPIC
