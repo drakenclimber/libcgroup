@@ -9,6 +9,10 @@
 
 #include "tools-common.h"
 
+#ifdef CGXSET
+#include "abstraction-common.h"
+#endif
+
 #define FL_RULES	1
 #define FL_COPY		2
 
@@ -19,6 +23,10 @@ enum {
 #ifndef UNIT_TEST
 static struct option const long_options[] =
 {
+#ifdef CGXSET
+	{"v1", no_argument, NULL, '1'},
+	{"v2", no_argument, NULL, '2'},
+#endif
 	{"rule", required_argument, NULL, 'r'},
 	{"help", no_argument, NULL, 'h'},
 	{"copy-from", required_argument, NULL, COPY_FROM_OPTION},
@@ -68,6 +76,12 @@ static void usage(int status, const char *program_name)
 		"   or: %s --copy-from <source_cgroup_path> "\
 		"<cgroup_path> ...\n", program_name, program_name);
 	printf("Set the parameters of given cgroup(s)\n");
+#ifdef CGXSET
+	printf("  -1, --v1                      Provided parameters are in "
+	       "v1 format\n");
+	printf("  -2, --v2                      Provided parameters are in "
+	       "v2 format\n");
+#endif
 	printf("  -r, --variable <name>			Define parameter "\
 		"to set\n");
 	printf("  --copy-from <source_cgroup_path>	Control group whose "\
@@ -139,6 +153,10 @@ int main(int argc, char *argv[])
 	char src_cg_path[FILENAME_MAX];
 	struct cgroup *src_cgroup;
 	struct cgroup *cgroup;
+#ifdef CGXSET
+	struct cgroup *converted_src_cgroup;
+	enum cg_version_t src_version = CGROUP_UNK;
+#endif
 
 	/* no parametr on input */
 	if (argc < 2) {
@@ -148,8 +166,13 @@ int main(int argc, char *argv[])
 	}
 
 	/* parse arguments */
+#ifdef CGXSET
+	while ((c = getopt_long (argc, argv,
+		"r:h12", long_options, NULL)) != -1) {
+#else
 	while ((c = getopt_long (argc, argv,
 		"r:h", long_options, NULL)) != -1) {
+#endif
 		switch (c) {
 		case 'h':
 			usage(0, argv[0]);
@@ -198,6 +221,14 @@ int main(int argc, char *argv[])
 			strncpy(src_cg_path, optarg, FILENAME_MAX);
 			src_cg_path[FILENAME_MAX-1] = '\0';
 			break;
+#ifdef CGXSET
+		case '1':
+			src_version = CGROUP_V1;
+			break;
+		case '2':
+			src_version = CGROUP_V2;
+			break;
+#endif
 		default:
 			usage(1, argv[0]);
 			ret = -1;
@@ -241,6 +272,22 @@ int main(int argc, char *argv[])
 		if (src_cgroup == NULL)
 			goto err;
 	}
+
+#ifdef CGXSET
+	converted_src_cgroup = cgroup_new_cgroup(src_cgroup->name);
+	if (converted_src_cgroup == NULL) {
+		ret = ECGCONTROLLERCREATEFAILED;
+		goto err;
+	}
+
+	ret = cgroup_convert_cgroup(converted_src_cgroup, CGROUP_DISK,
+				    src_cgroup, src_version);
+	if (ret)
+		goto err;
+
+	cgroup_free(&src_cgroup);
+	src_cgroup = converted_src_cgroup;
+#endif
 
 	while (optind < argc) {
 		/* create new cgroup */
