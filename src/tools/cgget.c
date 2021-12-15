@@ -25,6 +25,7 @@ static struct option const long_options[] =
 #ifdef CGXGET
 	{"v1", no_argument, NULL, '1'},
 	{"v2", no_argument, NULL, '2'},
+	{"ignore-unmappable", no_argument, NULL, 'i'},
 #endif
 	{"variable", required_argument, NULL, 'r'},
 	{"help", no_argument, NULL, 'h'},
@@ -51,6 +52,8 @@ static void usage(int status, const char *program_name)
 	       "v1 format\n");
 	printf("  -2, --v2			Provided parameters are in "
 	       "v2 format\n");
+	printf("  -i, --ignore-unmappable       Do not return an error for settings "
+	       "that cannot be converted\n");
 #endif
 	printf("  -a, --all			Print info about all relevant "
 	       "controllers\n");
@@ -401,7 +404,8 @@ out:
 #ifdef CGXGET
 static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 		      int * const cg_list_len, int * const mode,
-		      enum cg_version_t * const version)
+		      enum cg_version_t * const version,
+		      bool * const ignore_unmappable)
 #else
 static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 		      int * const cg_list_len, int * const mode)
@@ -415,7 +419,7 @@ static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 
 	/* Parse arguments. */
 #ifdef CGXGET
-	while ((c = getopt_long(argc, argv, "r:hnvg:a12", long_options, NULL))
+	while ((c = getopt_long(argc, argv, "r:hnvg:a12i", long_options, NULL))
 		> 0) {
 #else
 	while ((c = getopt_long(argc, argv, "r:hnvg:a", long_options, NULL))
@@ -467,6 +471,9 @@ static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 			break;
 		case '2':
 			*version = CGROUP_V2;
+			break;
+		case 'i':
+			*ignore_unmappable = true;
 			break;
 #endif
 		default:
@@ -810,6 +817,7 @@ int main(int argc, char *argv[])
 	int mode = MODE_SHOW_NAMES | MODE_SHOW_HEADERS;
 #ifdef CGXGET
 	enum cg_version_t version = CGROUP_UNK;
+	bool ignore_unmappable = false;
 #endif
 
 	/* No parameter on input? */
@@ -826,7 +834,8 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef CGXGET
-	ret = parse_opts(argc, argv, &cg_list, &cg_list_len, &mode, &version);
+	ret = parse_opts(argc, argv, &cg_list, &cg_list_len, &mode, &version,
+			 &ignore_unmappable);
 #else
 	ret = parse_opts(argc, argv, &cg_list, &cg_list_len, &mode);
 #endif
@@ -835,7 +844,12 @@ int main(int argc, char *argv[])
 
 #ifdef CGXGET
 	ret = convert_cgroups(&cg_list, cg_list_len, version, CGROUP_DISK);
-	if (ret)
+	if (ret == ECGNOVERSIONCONVERT && ignore_unmappable)
+		/* The user has specified that we should ignore any errors
+		 * due to being unable to map from v1 to v2 or vice versa
+		 */
+		ret = 0;
+	else if (ret)
 		goto err;
 #endif
 
