@@ -86,6 +86,9 @@ jobs:
       run: |
         # The cgroup v1 runner hosted by Github Actions doesn't allow
         # for exclusive cpusets.  Thus, skip the cpuset automated test
+        pushd src/python/build/lib.*
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
+        popd
         pushd tests/ftests
         ./ftests.py -l 10 -L ftests.log
         ./ftests.py -l 10 -L ftests-nocontainer.log --skip 36 --no-container
@@ -138,6 +141,9 @@ jobs:
       uses: ./.github/actions/setup-libcgroup
     - name: Run functional tests
       run: |
+        pushd src/python/build/lib.*
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
+        popd
         pushd tests/ftests
         make check
         popd
@@ -183,6 +189,9 @@ jobs:
       uses: ./.github/actions/setup-libcgroup
     - name: Run functional tests
       run: |
+        pushd src/python/build/lib.*
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
+        popd
         pushd tests/ftests
         make check
         popd
