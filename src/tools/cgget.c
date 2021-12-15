@@ -11,7 +11,7 @@
 
 #include "tools-common.h"
 
-#ifdef CGXGET
+#if defined(CGXGET) || defined(LIBCG_LIB)
 #include "abstraction-common.h"
 #endif
 
@@ -20,13 +20,14 @@
 
 #define LL_MAX				100
 
+#ifndef LIBCG_LIB
 static struct option const long_options[] =
 {
 #ifdef CGXGET
 	{"v1", no_argument, NULL, '1'},
 	{"v2", no_argument, NULL, '2'},
 	{"ignore-unmappable", no_argument, NULL, 'i'},
-#endif
+#endif /* CGXGET */
 	{"variable", required_argument, NULL, 'r'},
 	{"help", no_argument, NULL, 'h'},
 	{"all",  no_argument, NULL, 'a'},
@@ -54,7 +55,7 @@ static void usage(int status, const char *program_name)
 	       "v2 format\n");
 	printf("  -i, --ignore-unmappable       Do not return an error for settings "
 	       "that cannot be converted\n");
-#endif
+#endif /* CGXGET */
 	printf("  -a, --all			Print info about all relevant "
 	       "controllers\n");
 	printf("  -g <controllers>		Controller which info should "
@@ -409,7 +410,7 @@ static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 #else
 static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 		      int * const cg_list_len, int * const mode)
-#endif
+#endif /* CGXGET */
 {
 	bool do_not_fill_controller = false;
 	bool fill_controller = false;
@@ -424,7 +425,7 @@ static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 #else
 	while ((c = getopt_long(argc, argv, "r:hnvg:a", long_options, NULL))
 		> 0) {
-#endif
+#endif /* CGXGET */
 		switch (c) {
 		case 'h':
 			usage(0, argv[0]);
@@ -475,7 +476,7 @@ static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 		case 'i':
 			*ignore_unmappable = true;
 			break;
-#endif
+#endif /* CGXGET */
 		default:
 			usage(1, argv[0]);
 			exit(1);
@@ -496,6 +497,7 @@ static int parse_opts(int argc, char *argv[], struct cgroup **cg_list[],
 err:
 	return ret;
 }
+#endif /* !LIBCG_LIB */
 
 static int get_cv_value(struct control_value * const cv,
 			const char * const cg_name,
@@ -710,6 +712,7 @@ static int get_cgroup_values(struct cgroup * const cg)
 	return ret;
 }
 
+#ifndef LIBCG_LIB
 static int get_values(struct cgroup *cg_list[], int cg_list_len)
 {
 	int ret;
@@ -724,7 +727,8 @@ static int get_values(struct cgroup *cg_list[], int cg_list_len)
 	return ret;
 }
 
-void print_control_values(const struct control_value * const cv, int mode)
+static void print_control_values(const struct control_value * const cv,
+				 int mode)
 {
 	if (mode & MODE_SHOW_NAMES)
 		printf("%s: ", cv->name);
@@ -735,7 +739,8 @@ void print_control_values(const struct control_value * const cv, int mode)
 		printf("%s\n", cv->value);
 }
 
-void print_controller(const struct cgroup_controller * const cgc, int mode)
+static void print_controller(const struct cgroup_controller * const cgc,
+			     int mode)
 {
 	int i;
 
@@ -768,9 +773,9 @@ static void print_cgroups(struct cgroup *cg_list[], int cg_list_len, int mode)
 }
 
 #ifdef CGXGET
-int convert_cgroups(struct cgroup **cg_list[], int cg_list_len,
-		    enum cg_version_t in_version,
-		    enum cg_version_t out_version)
+static int convert_cgroups(struct cgroup **cg_list[], int cg_list_len,
+			   enum cg_version_t in_version,
+			   enum cg_version_t out_version)
 {
 	struct cgroup **cg_converted_list;
 	int i = 0, j, ret = 0;
@@ -807,7 +812,7 @@ out:
 
 	return ret;
 }
-#endif
+#endif /* CGXGET */
 
 int main(int argc, char *argv[])
 {
@@ -818,7 +823,7 @@ int main(int argc, char *argv[])
 #ifdef CGXGET
 	enum cg_version_t version = CGROUP_UNK;
 	bool ignore_unmappable = false;
-#endif
+#endif /* CGXGET */
 
 	/* No parameter on input? */
 	if (argc < 2) {
@@ -838,7 +843,7 @@ int main(int argc, char *argv[])
 			 &ignore_unmappable);
 #else
 	ret = parse_opts(argc, argv, &cg_list, &cg_list_len, &mode);
-#endif
+#endif /* CGXGET */
 	if (ret)
 		goto err;
 
@@ -851,7 +856,7 @@ int main(int argc, char *argv[])
 		ret = 0;
 	else if (ret)
 		goto err;
-#endif
+#endif /* CGXGET */
 
 	ret = get_values(cg_list, cg_list_len);
 	if (ret)
@@ -861,7 +866,7 @@ int main(int argc, char *argv[])
 	ret = convert_cgroups(&cg_list, cg_list_len, CGROUP_DISK, version);
 	if (ret)
 		goto err;
-#endif
+#endif /* CGXGET */
 
 	print_cgroups(cg_list, cg_list_len, mode);
 
@@ -871,3 +876,54 @@ err:
 
 	return ret;
 }
+#endif /* LIBCG_LIB */
+
+#ifdef LIBCG_LIB
+int cgroup_cgxget(struct cgroup **cg,
+		  enum cg_version_t version, bool ignore_unmappable)
+{
+	struct cgroup *disk_cg, *out_cg;
+	int ret;
+
+	if (!cg || !(*cg)) {
+		ret = ECGINVAL;
+		goto out;
+	}
+
+	disk_cg = cgroup_new_cgroup((*cg)->name);
+	if (!disk_cg) {
+		ret = ECGCONTROLLERCREATEFAILED;
+		goto out;
+	}
+
+	ret = cgroup_convert_cgroup(disk_cg, CGROUP_DISK, *cg, version);
+	if (ret == ECGNOVERSIONCONVERT && ignore_unmappable)
+		ret = 0;
+	else if (ret)
+		goto out;
+
+	ret = get_cgroup_values(disk_cg);
+	if (ret)
+		goto out;
+
+	out_cg = cgroup_new_cgroup((*cg)->name);
+	if (!out_cg) {
+		ret = ECGCONTROLLERCREATEFAILED;
+		goto out;
+	}
+
+	ret = cgroup_convert_cgroup(out_cg, version, disk_cg, CGROUP_DISK);
+	if (ret) {
+		cgroup_free(&out_cg);
+		goto out;
+	}
+
+	cgroup_free(cg);
+	*cg = out_cg;
+
+out:
+	if (disk_cg)
+		cgroup_free(&disk_cg);
+	return ret;
+}
+#endif /* LIBCG_LIB */
