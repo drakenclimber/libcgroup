@@ -26,6 +26,7 @@ static struct option const long_options[] =
 #ifdef CGXSET
 	{"v1", no_argument, NULL, '1'},
 	{"v2", no_argument, NULL, '2'},
+	{"ignore-unmappable", no_argument, NULL, 'i'},
 #endif
 	{"rule", required_argument, NULL, 'r'},
 	{"help", no_argument, NULL, 'h'},
@@ -81,6 +82,8 @@ static void usage(int status, const char *program_name)
 	       "v1 format\n");
 	printf("  -2, --v2                      Provided parameters are in "
 	       "v2 format\n");
+	printf("  -i, --ignore-unmappable       Do not return an error for settings "
+	       "that cannot be converted\n");
 #endif
 	printf("  -r, --variable <name>			Define parameter "\
 		"to set\n");
@@ -156,6 +159,7 @@ int main(int argc, char *argv[])
 #ifdef CGXSET
 	struct cgroup *converted_src_cgroup;
 	enum cg_version_t src_version = CGROUP_UNK;
+	bool ignore_unmappable = false;
 #endif
 
 	/* no parametr on input */
@@ -168,7 +172,7 @@ int main(int argc, char *argv[])
 	/* parse arguments */
 #ifdef CGXSET
 	while ((c = getopt_long (argc, argv,
-		"r:h12", long_options, NULL)) != -1) {
+		"r:h12i", long_options, NULL)) != -1) {
 #else
 	while ((c = getopt_long (argc, argv,
 		"r:h", long_options, NULL)) != -1) {
@@ -227,6 +231,9 @@ int main(int argc, char *argv[])
 			break;
 		case '2':
 			src_version = CGROUP_V2;
+			break;
+		case 'i':
+			ignore_unmappable = true;
 			break;
 #endif
 		default:
@@ -300,7 +307,13 @@ int main(int argc, char *argv[])
 
 		ret = cgroup_convert_cgroup(converted_src_cgroup, CGROUP_DISK,
 					    src_cgroup, src_version);
-		if (ret)
+		if (ret == ECGNOVERSIONCONVERT && ignore_unmappable)
+			/* The user has specified that we should ignore
+			 * any errors due to being unable to map from v1 to
+			 * v2 or vice versa
+			 */
+			ret = 0;
+		else if (ret)
 			goto err;
 
 		cgroup_free(&cgroup);
