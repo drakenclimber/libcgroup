@@ -273,22 +273,6 @@ int main(int argc, char *argv[])
 			goto err;
 	}
 
-#ifdef CGXSET
-	converted_src_cgroup = cgroup_new_cgroup(src_cgroup->name);
-	if (converted_src_cgroup == NULL) {
-		ret = ECGCONTROLLERCREATEFAILED;
-		goto err;
-	}
-
-	ret = cgroup_convert_cgroup(converted_src_cgroup, CGROUP_DISK,
-				    src_cgroup, src_version);
-	if (ret)
-		goto err;
-
-	cgroup_free(&src_cgroup);
-	src_cgroup = converted_src_cgroup;
-#endif
-
 	while (optind < argc) {
 		/* create new cgroup */
 		cgroup = cgroup_new_cgroup(argv[optind]);
@@ -306,6 +290,22 @@ int main(int argc, char *argv[])
 				argv[0], src_cg_path, cgroup_strerror(ret));
 			goto cgroup_free_err;
 		}
+
+#ifdef CGXSET
+		converted_src_cgroup = cgroup_new_cgroup(cgroup->name);
+		if (converted_src_cgroup == NULL) {
+			ret = ECGCONTROLLERCREATEFAILED;
+			goto err;
+		}
+
+		ret = cgroup_convert_cgroup(converted_src_cgroup, CGROUP_DISK,
+					    src_cgroup, src_version);
+		if (ret)
+			goto err;
+
+		cgroup_free(&cgroup);
+		cgroup = converted_src_cgroup;
+#endif
 
 		/* modify cgroup based on values of the new one */
 		ret = cgroup_modify_cgroup(cgroup);
