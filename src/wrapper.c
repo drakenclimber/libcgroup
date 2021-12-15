@@ -297,6 +297,33 @@ int cgroup_add_value_bool(struct cgroup_controller *controller,
 	return ret;
 }
 
+int cgroup_remove_value(struct cgroup_controller * const controller,
+			const char * const name)
+{
+	int i;
+
+	for (i = 0; i < controller->index; i++) {
+		if (strcmp(controller->values[i]->name, name) == 0) {
+			if (i == (controller->index - 1)) {
+				/* This is the last entry in the table.
+				 * There's nothing to move
+				 */
+				controller->index--;
+			} else {
+				memmove(controller->values[i],
+					controller->values[i + 1],
+					sizeof(struct control_value) *
+						(controller->index - i - 1));
+				controller->index--;
+			}
+
+			return 0;
+		}
+	}
+
+	return ECGROUPNOTEXIST;
+}
+
 int cgroup_compare_controllers(struct cgroup_controller *cgca,
 					struct cgroup_controller *cgcb)
 {
