@@ -890,34 +890,40 @@ int cgroup_cgxget(struct cgroup **cg,
 		goto out;
 	}
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	disk_cg = cgroup_new_cgroup((*cg)->name);
 	if (!disk_cg) {
 		ret = ECGCONTROLLERCREATEFAILED;
 		goto out;
 	}
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	ret = cgroup_convert_cgroup(disk_cg, CGROUP_DISK, *cg, version);
 	if (ret == ECGNOVERSIONCONVERT && ignore_unmappable)
 		ret = 0;
 	else if (ret)
 		goto out;
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	ret = get_cgroup_values(disk_cg);
 	if (ret)
 		goto out;
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	out_cg = cgroup_new_cgroup((*cg)->name);
 	if (!out_cg) {
 		ret = ECGCONTROLLERCREATEFAILED;
 		goto out;
 	}
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	ret = cgroup_convert_cgroup(out_cg, version, disk_cg, CGROUP_DISK);
 	if (ret) {
 		cgroup_free(&out_cg);
 		goto out;
 	}
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	cgroup_free(cg);
 	*cg = out_cg;
 

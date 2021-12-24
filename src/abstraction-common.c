@@ -229,6 +229,17 @@ int cgroup_convert_cgroup(struct cgroup * const out_cgroup,
 			goto out;
 		}
 
+		/* copy over the "cgroup" controller verbatim */
+		if (strncmp(in_cgroup->controller[i]->name, CGROUP_FILE_PREFIX,
+			    strlen(CGROUP_FILE_PREFIX)) == 0) {
+			ret = cgroup_copy_controller_values(cgc,
+				in_cgroup->controller[i]);
+			if (ret)
+				goto out;
+
+			continue;
+		}
+
 		/* the user has overridden the version */
 		if (in_version == CGROUP_V1 || in_version == CGROUP_V2) {
 			in_cgroup->controller[i]->version = in_version;

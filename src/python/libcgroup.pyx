@@ -116,6 +116,7 @@ cdef class Cgroup:
         cdef cgroup.cgroup_controller * cgcp
         cdef cgroup.cgroup * cgp
 
+        print("adding controller {}".format(ctrl_name))
         cgcp = cgroup.cgroup_add_controller(self._cgp,
                                             c_str(ctrl_name))
         if cgcp == NULL:
@@ -146,6 +147,12 @@ cdef class Cgroup:
                                             c_str(ctrl_name))
         if cgcp == NULL:
             self.add_controller(ctrl_name)
+
+            cgcp = cgroup.cgroup_get_controller(self._cgp,
+                                                c_str(ctrl_name))
+            if cgcp == NULL:
+                raise RuntimeError("Failed to get controller {}".format(
+                                   ctrl_name))
 
         if setting_value == None:
             ret = cgroup.cgroup_add_value_string(cgcp,
@@ -215,6 +222,20 @@ cdef class Cgroup:
         out_cgp._pythonize_cgroup()
 
         return out_cgp
+
+    def create(self, ignore_ownership=True):
+        """Write this cgroup to the cgroup sysfs
+
+        Arguments:
+        ignore_ownership - if true, all errors are ignored when setting ownership
+                           of the group and its tasks file
+
+        Return:
+        None
+        """
+        ret = cgroup.cgroup_create_cgroup(self._cgp, ignore_ownership)
+        if ret != 0:
+            raise RuntimeError("Failed to create cgroup: {}".format(ret))
 
     def cgxget(self, ignore_unmappable=False):
         """Read the requested settings from the cgroup sysfs

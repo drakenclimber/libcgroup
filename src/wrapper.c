@@ -105,6 +105,7 @@ struct cgroup_controller *cgroup_add_controller(struct cgroup *cgroup,
 
 	cgroup->controller[cgroup->index] = controller;
 	cgroup->index++;
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 
 	return controller;
 }
@@ -202,25 +203,31 @@ int cgroup_add_value_string(struct cgroup_controller *controller,
 	int i;
 	struct control_value *cntl_value;
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	if (!controller)
 		return ECGINVAL;
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	if (controller->index >= CG_NV_MAX)
 		return ECGMAXVALUESEXCEEDED;
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	for (i = 0; i < controller->index && i < CG_NV_MAX; i++) {
 		if (!strcmp(controller->values[i]->name, name))
 			return ECGVALUEEXISTS;
 	}
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	cntl_value = calloc(1, sizeof(struct control_value));
 
 	if (!cntl_value)
 		return ECGCONTROLLERCREATEFAILED;
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	strncpy(cntl_value->name, name, sizeof(cntl_value->name));
 	cntl_value->name[sizeof(cntl_value->name)-1] = '\0';
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	if (value) {
 		if (strlen(value) >= sizeof(cntl_value->value)) {
 			fprintf(stderr, "value exceeds the maximum of %ld characters\n",
@@ -234,6 +241,7 @@ int cgroup_add_value_string(struct cgroup_controller *controller,
 		cntl_value->dirty = true;
 	}
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	controller->values[controller->index] = cntl_value;
 	controller->index++;
 

@@ -2416,12 +2416,14 @@ static int _cgroup_create_cgroup(const struct cgroup * const cgroup,
 	base = strdup(path);
 
 	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	if (!base) {
 		last_errno = errno;
 		error = ECGOTHER;
 		goto err;
 	}
 
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	if (!ignore_ownership) {
 		cgroup_dbg("Changing ownership of %s\n", fts_path[0]);
 		error = cg_chown_recursive(fts_path,
@@ -2435,15 +2437,18 @@ static int _cgroup_create_cgroup(const struct cgroup * const cgroup,
 					1, cgroup_ignored_tasks_files);
 	}
 
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	if (error)
 		goto err;
 
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	if (controller) {
 		error = cgroup_set_values_recursive(base, controller, false);
 		if (error)
 			goto err;
 	}
 
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	if (!ignore_ownership && version == CGROUP_V1) {
 		error = cgroup_chown_chmod_tasks(base,
 				cgroup->tasks_uid, cgroup->tasks_gid,
@@ -2451,6 +2456,7 @@ static int _cgroup_create_cgroup(const struct cgroup * const cgroup,
 		if (error)
 			goto err;
 	}
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	free(base);
 	base = NULL;
 
@@ -2497,6 +2503,7 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 		if (error)
 			goto err;
 	}
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 
 	/*
 	 * XX: One important test to be done is to check, if you have multiple
@@ -2509,6 +2516,7 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 		if (error)
 			goto err;
 	}
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 
 err:
 	if (retval && !error)
