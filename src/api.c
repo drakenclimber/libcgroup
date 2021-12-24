@@ -1486,15 +1486,19 @@ char *cg_build_path_locked(const char *name, char *path,
 {
 	int i, ret;
 	for (i = 0; cg_mount_table[i].name[0] != '\0'; i++) {
-		/* Two ways to successfully move forward here:
+		/* Three ways to successfully move forward here:
 		 * 1. The "type" controller matches the name of a mounted
 		 *    controller
 		 * 2. The "type" controller requested is "cgroup" and there's
 		 *    a "real" controller mounted as cgroup v2
+		 * 3. The "type" controller is NULL and there's a "real"
+		 *    controller mounted as cgroup v2.  This allows a user
+		 *    to create a v2 cgroup with no controllers enabled
 		 */
-		if ((strcmp(cg_mount_table[i].name, type) == 0) ||
-		    (strcmp(type, CGROUP_FILE_PREFIX) == 0 &&
-		     cg_mount_table[i].version == CGROUP_V2)) {
+		if ((type && strcmp(cg_mount_table[i].name, type) == 0) ||
+		    (type && strcmp(type, CGROUP_FILE_PREFIX) == 0 &&
+		     cg_mount_table[i].version == CGROUP_V2) ||
+		    (type == NULL && cg_mount_table[i].version == CGROUP_V2)) {
 			if (cg_namespace_table[i]) {
 				ret = snprintf(path, FILENAME_MAX, "%s/%s/",
 						cg_mount_table[i].mount.path,
@@ -2351,34 +2355,15 @@ err:
 	return error;
 }
 
-/** cgroup_create_cgroup creates a new control group.
- * struct cgroup *cgroup: The control group to be created
- *
- * returns 0 on success. We recommend calling cg_delete_cgroup
- * if this routine fails. That should do the cleanup operation.
- * If ECGCANTSETVALUE is returned, the group was created successfully
- * but not all controller parameters were successfully set.
- */
-int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
+static int _cgroup_create_cgroup(const struct cgroup * const cgroup,
+				 const struct cgroup_controller * const controller,
+				 int ignore_ownership)
 {
 	enum cg_version_t version;
 	char *fts_path[2];
 	char *base = NULL;
 	char *path = NULL;
-	int i, k;
-	int error = 0;
-	int retval = 0;
-
-	if (!cgroup_initialized)
-		return ECGROUPNOTINITIALIZED;
-
-	if (!cgroup)
-		return ECGROUPNOTALLOWED;
-
-	for (i = 0; i < cgroup->index;	i++) {
-		if (!cgroup_test_subsys_mounted(cgroup->controller[i]->name))
-			return ECGROUPSUBSYSNOTMOUNTED;
-	}
+	int error;
 
 	fts_path[0] = (char *)malloc(FILENAME_MAX);
 	if (!fts_path[0]) {
@@ -2388,18 +2373,19 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 	fts_path[1] = NULL;
 	path = fts_path[0];
 
-	/*
-	 * XX: One important test to be done is to check, if you have multiple
-	 * subsystems mounted at one point, all of them *have* be on the cgroup
-	 * data structure. If not, we fail.
-	 */
-	for (k = 0; k < cgroup->index; k++) {
-		if (!cg_build_path(cgroup->name, path,
-				cgroup->controller[k]->name))
-			continue;
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
+	if (controller) {
+		if (!cg_build_path(cgroup->name, path, controller->name))
+			return 0;
+	} else {
+		if (!cg_build_path(cgroup->name, path, NULL))
+			return 0;
+	}
 
-		error = cgroup_get_controller_version(
-			cgroup->controller[k]->name, &version);
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
+	if (controller) {
+		error = cgroup_get_controller_version(controller->name,
+						      &version);
 		if (error)
 			goto err;
 
@@ -2415,61 +2401,116 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 			dname = dirname(parent);
 
 			error = cgroupv2_subtree_control_recursive(dname,
-					cgroup->controller[k]->name, true);
+					controller->name, true);
 			free(parent);
 			if (error)
 				goto err;
 		}
-
-		error = cg_create_control_group(path);
-		if (error)
-			goto err;
-
-		base = strdup(path);
-
-		if (!base) {
-			last_errno = errno;
-			error = ECGOTHER;
-			goto err;
-		}
-
-		if (!ignore_ownership) {
-			cgroup_dbg("Changing ownership of %s\n", fts_path[0]);
-			error = cg_chown_recursive(fts_path,
-				cgroup->control_uid, cgroup->control_gid);
-			if (!error)
-				error = cg_chmod_recursive_controller(fts_path[0],
-						cgroup->control_dperm,
-						cgroup->control_dperm != NO_PERMS,
-						cgroup->control_fperm,
-						cgroup->control_fperm != NO_PERMS,
-						1, cgroup_ignored_tasks_files);
-		}
-
-		if (error)
-			goto err;
-
-		error = cgroup_set_values_recursive(base,
-				cgroup->controller[k], false);
-		if (error)
-			goto err;
-
-		if (!ignore_ownership && version == CGROUP_V1) {
-			error = cgroup_chown_chmod_tasks(base,
-					cgroup->tasks_uid, cgroup->tasks_gid,
-					cgroup->task_fperm);
-			if (error)
-				goto err;
-		}
-		free(base);
-		base = NULL;
 	}
+
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
+	error = cg_create_control_group(path);
+	if (error)
+		goto err;
+
+	base = strdup(path);
+
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
+	if (!base) {
+		last_errno = errno;
+		error = ECGOTHER;
+		goto err;
+	}
+
+	if (!ignore_ownership) {
+		cgroup_dbg("Changing ownership of %s\n", fts_path[0]);
+		error = cg_chown_recursive(fts_path,
+			cgroup->control_uid, cgroup->control_gid);
+		if (!error)
+			error = cg_chmod_recursive_controller(fts_path[0],
+					cgroup->control_dperm,
+					cgroup->control_dperm != NO_PERMS,
+					cgroup->control_fperm,
+					cgroup->control_fperm != NO_PERMS,
+					1, cgroup_ignored_tasks_files);
+	}
+
+	if (error)
+		goto err;
+
+	if (controller) {
+		error = cgroup_set_values_recursive(base, controller, false);
+		if (error)
+			goto err;
+	}
+
+	if (!ignore_ownership && version == CGROUP_V1) {
+		error = cgroup_chown_chmod_tasks(base,
+				cgroup->tasks_uid, cgroup->tasks_gid,
+				cgroup->task_fperm);
+		if (error)
+			goto err;
+	}
+	free(base);
+	base = NULL;
 
 err:
 	if (path)
 		free(path);
 	if (base)
 		free(base);
+	return error;
+}
+
+/** cgroup_create_cgroup creates a new control group.
+ * struct cgroup *cgroup: The control group to be created
+ *
+ * returns 0 on success. We recommend calling cg_delete_cgroup
+ * if this routine fails. That should do the cleanup operation.
+ * If ECGCANTSETVALUE is returned, the group was created successfully
+ * but not all controller parameters were successfully set.
+ */
+int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
+{
+	int error = 0;
+	int retval = 0;
+	int i, k;
+
+	if (!cgroup_initialized)
+		return ECGROUPNOTINITIALIZED;
+
+	if (!cgroup)
+		return ECGROUPNOTALLOWED;
+
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
+	for (i = 0; i < cgroup->index;	i++) {
+		if (!cgroup_test_subsys_mounted(cgroup->controller[i]->name))
+			return ECGROUPSUBSYSNOTMOUNTED;
+	}
+
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
+
+	if (cgroup->index == 0) {
+		/* create an empty cgroup v2 cgroup */
+		fprintf(stdout, "%s:%d\n", __func__, __LINE__);
+		error = _cgroup_create_cgroup(cgroup, NULL, ignore_ownership);
+		if (error)
+			goto err;
+	}
+
+	/*
+	 * XX: One important test to be done is to check, if you have multiple
+	 * subsystems mounted at one point, all of them *have* be on the cgroup
+	 * data structure. If not, we fail.
+	 */
+	for (k = 0; k < cgroup->index; k++) {
+		error = _cgroup_create_cgroup(cgroup, cgroup->controller[k],
+					      ignore_ownership);
+		if (error)
+			goto err;
+	}
+
+err:
 	if (retval && !error)
 		error = retval;
 	return error;
