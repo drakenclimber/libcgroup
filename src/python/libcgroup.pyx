@@ -116,7 +116,6 @@ cdef class Cgroup:
         cdef cgroup.cgroup_controller * cgcp
         cdef cgroup.cgroup * cgp
 
-        print("adding controller {}".format(ctrl_name))
         cgcp = cgroup.cgroup_add_controller(self._cgp,
                                             c_str(ctrl_name))
         if cgcp == NULL:
