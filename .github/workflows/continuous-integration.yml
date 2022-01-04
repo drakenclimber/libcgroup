@@ -89,7 +89,7 @@ jobs:
         popd
         pushd tests/ftests
         ./ftests.py -l 10 -L ftests.log
-        ./ftests.py -l 10 -L ftests-nocontainer.log --skip 36 --no-container
+        ./ftests.py -l 10 -L ftests-nocontainer.log --skip 37 --no-container
         popd
     - name: Archive test logs
       if: ${{ always() }}
