@@ -214,6 +214,12 @@ struct cgroup_dictionary_iterator {
 	struct cgroup_dictionary_item *item;
 };
 
+/** Opaque iterator for cgroup stats */
+struct cgroup_stats_iterator {
+	FILE *fp;
+	cg_version_t version;
+};
+
 /**
  * per thread errno variable, to be used when return code is ECGOTHER
  */

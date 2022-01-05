@@ -4651,6 +4651,14 @@ static int cg_read_stat(FILE *fp, struct cgroup_stat *cgroup_stat)
 	}
 	strncpy(cgroup_stat->value, token, CG_VALUE_MAX - 1);
 
+	/* convert the stat here.  note that the cpuacct.stat file
+	 * may need to be opened when going from a v1 system to a v2
+	 * request
+	 */
+	ret = cgroup_convert_stat(out_stat, out_version, in_stat, in_version, csit???);
+	if (ret)
+		somethingorother
+
 out_free:
 	free(line);
 	return ret;
@@ -4733,7 +4741,7 @@ int cgroup_read_value_begin(const char * const controller, const char *path,
 
 int cgroup_read_stats_end(void **handle)
 {
-	FILE *fp;
+	struct cgroup_stats_iterator *csit;
 
 	if (!cgroup_initialized)
 		return ECGROUPNOTINITIALIZED;
@@ -4741,18 +4749,20 @@ int cgroup_read_stats_end(void **handle)
 	if (!handle)
 		return ECGINVAL;
 
-	fp = (FILE *)*handle;
-	if (fp == NULL)
+	csit = (struct cgroup_stats_iterator *)*handle;
+	if (csit->fp == NULL)
 		return ECGINVAL;
 
-	fclose(fp);
+	fclose(csit->fp);
+
+	/* free csit->path and csit->controller here */
 	return 0;
 }
 
 int cgroup_read_stats_next(void **handle, struct cgroup_stat *cgroup_stat)
 {
 	int ret = 0;
-	FILE *fp;
+	struct cgroup_stats_iterator *csit;
 
 	if (!cgroup_initialized)
 		return ECGROUPNOTINITIALIZED;
@@ -4760,9 +4770,9 @@ int cgroup_read_stats_next(void **handle, struct cgroup_stat *cgroup_stat)
 	if (!handle || !cgroup_stat)
 		return ECGINVAL;
 
-	fp = (FILE *)*handle;
-	ret = cg_read_stat(fp, cgroup_stat);
-	*handle = fp;
+	csit = (struct cgroup_stats_iterator *)*handle;
+	ret = cg_read_stat(csit, cgroup_stat);
+	*handle = csit;
 	return ret;
 }
 
@@ -4770,33 +4780,53 @@ int cgroup_read_stats_next(void **handle, struct cgroup_stat *cgroup_stat)
  * TODO: Need to decide a better place to put this function.
  */
 int cgroup_read_stats_begin(const char *controller, const char *path,
-				void **handle, struct cgroup_stat *cgroup_stat)
+				void **handle, struct cgroup_stat *cgroup_stat,
+				cg_version_t version)
 {
 	int ret = 0;
 	char stat_file[FILENAME_MAX + sizeof(".stat")];
 	char stat_path[FILENAME_MAX];
+	struct cgroup_stats_iterator *csit;
 	FILE *fp;
 
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	if (!cgroup_initialized)
 		return ECGROUPNOTINITIALIZED;
 
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	if (!cgroup_stat || !handle)
 		return ECGINVAL;
 
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	if (!cg_build_path(path, stat_path, controller))
 		return ECGOTHER;
 
+	csit = malloc(sizeof(struct cgroup_stats_iterator));
+	if (!csit)
+		return ECGOTHER;
+
+	/* probably need to copy path into csit in case the user
+	 * deletes it early
+	 */
+	csit->path = path;
+	/* also copy this in */
+	csit->controller = controller;
+
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
 	snprintf(stat_file, sizeof(stat_file), "%s/%s.stat", stat_path,
 			controller);
 
-	fp = fopen(stat_file, "re");
-	if (!fp) {
+	fprintf(stdout, "%s:%d stat_file=%s\n", __func__, __LINE__, stat_file);
+	csit->fp = fopen(stat_file, "re");
+	if (!csit->fp) {
 		cgroup_warn("Warning: fopen failed\n");
 		return ECGINVAL;
 	}
 
-	ret = cg_read_stat(fp, cgroup_stat);
-	*handle = fp;
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
+	ret = cg_read_stat(csit->fp, cgroup_stat);
+	fprintf(stdout, "%s:%d\n", __func__, __LINE__);
+	*handle = csit;
 	return ret;
 }
 

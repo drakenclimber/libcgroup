@@ -39,6 +39,21 @@ struct cgroup_abstraction_map {
 	void *out_dflt;
 };
 
+struct cgroup_stat_abstraction_map {
+	/* if the conversion isn't a one-to-one mapping or the mathematical
+	 * conversion is unique, create a custom conversion function.
+	 */
+	int (*cgroup_convert)(struct cgroup_controller * const dst_cgc,
+			      const char * const in_value,
+			      const char * const out_setting,
+			      void *in_dflt, void *out_dflt);
+	char *controller;
+	char *in_setting;
+	void *in_dflt;
+	char *out_setting;
+	void *out_dflt;
+};
+
 extern const struct cgroup_abstraction_map cgroup_v1_to_v2_map[];
 extern const int cgroup_v1_to_v2_map_sz;
 

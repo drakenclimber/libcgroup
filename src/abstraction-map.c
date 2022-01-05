@@ -79,3 +79,25 @@ const struct cgroup_abstraction_map cgroup_v2_to_v1_map[] = {
 };
 const int cgroup_v2_to_v1_map_sz = sizeof(cgroup_v2_to_v1_map) /
 				   sizeof(cgroup_v2_to_v1_map[0]);
+
+const struct cgroup_stat_abstraction_map cgroup_stat_v1_to_v2_map[] = {
+	/* cpu controller */
+	{cgroup_convert_passthrough, "cpu", "nr_periods", NULL, "nr_periods", NULL},
+	{cgroup_convert_passthrough, "cpu", "nr_throttled", NULL, "nr_throttled", NULL},
+	{cgroup_convert_name_only, "cpu", "throttled_time", NULL, "nr_throttled_usec", NULL},
+};
+const int cgroup_stat_v1_to_v2_map_sz = sizeof(cgroup_stat_v1_to_v2_map) /
+					sizeof(cgroup_stat_v1_to_v2_map[0]);
+
+const struct cgroup_stat_abstraction_map cgroup_stat_v2_to_v1_map[] = {
+	/* cpu controller */
+	/* hmmmm.... these three map to cpuacct.stat.  how to handle that??? */
+	{cgroup_convert_unmappable, "cpu", "usage_usec", NULL, NULL, NULL},
+	{cgroup_convert_unmappable, "cpu", "user_usec", NULL, NULL, NULL},
+	{cgroup_convert_unmappable, "cpu", "system_usec", NULL, NULL, NULL},
+	{cgroup_convert_passthrough, "cpu", "nr_periods", NULL, "nr_periods", NULL},
+	{cgroup_convert_passthrough, "cpu", "nr_throttled", NULL, "nr_throttled", NULL},
+	{cgroup_convert_name_only, "cpu", "throttled_usec", NULL, "nr_throttled_time", NULL},
+};
+const int cgroup_stat_v1_to_v2_map_sz = sizeof(cgroup_stat_v1_to_v2_map) /
+					sizeof(cgroup_stat_v1_to_v2_map[0]);
