@@ -150,10 +150,10 @@ $(function() {
 <div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span> </div>
 <div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span><span class="preprocessor">#define CGROUP_FILE_PREFIX  &quot;cgroup&quot;</span></div>
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span> </div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span><span class="preprocessor">#define cgroup_err(x...)    cgroup_log(CGROUP_LOG_ERROR, x)</span></div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span><span class="preprocessor">#define cgroup_warn(x...)   cgroup_log(CGROUP_LOG_WARNING, x)</span></div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="preprocessor">#define cgroup_info(x...)   cgroup_log(CGROUP_LOG_INFO, x)</span></div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span><span class="preprocessor">#define cgroup_dbg(x...)    cgroup_log(CGROUP_LOG_DEBUG, x)</span></div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span><span class="preprocessor">#define cgroup_err(x...) cgroup_log(CGROUP_LOG_ERROR, &quot;Error: &quot;</span> x)</div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span><span class="preprocessor">#define cgroup_warn(x...) cgroup_log(CGROUP_LOG_WARNING, &quot;Warning: &quot;</span> x)</div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="preprocessor">#define cgroup_info(x...) cgroup_log(CGROUP_LOG_INFO, &quot;Info: &quot;</span> x)</div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span><span class="preprocessor">#define cgroup_dbg(x...) cgroup_log(CGROUP_LOG_DEBUG, x)</span></div>
 <div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span> </div>
 <div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span><span class="preprocessor">#define CGROUP_DEFAULT_LOGLEVEL CGROUP_LOG_ERROR</span></div>
 <div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span> </div>
