@@ -93,6 +93,9 @@ __thread char *cg_namespace_table[CG_CONTROLLER_MAX];
 pthread_rwlock_t cg_mount_table_lock = PTHREAD_RWLOCK_INITIALIZER;
 struct cg_mount_table_s cg_mount_table[CG_CONTROLLER_MAX];
 
+/* Cgroup v2 mount paths, with empty controllers */
+struct cg_mount_point *cg_cgroup_v2_empty_mount_paths;
+
 const char * const cgroup_strerror_codes[] = {
 	"Cgroup is not compiled in",
 	"Cgroup is not mounted",
@@ -1230,7 +1233,32 @@ STATIC int cgroup_process_v2_mnt(struct mntent *ent, int *mnt_tbl_idx)
 
 	ret_c = fgets(line, LL_MAX, fp);
 	if (ret_c == NULL) {
+		struct cg_mount_point *tmp, *t;
+
 		ret = ECGEOF;
+
+		tmp = malloc(sizeof(struct cg_mount_point));
+		if (tmp == NULL) {
+			last_errno = errno;
+			ret = ECGOTHER;
+			goto out;
+		}
+
+		strncpy(tmp->path, cg_cgroup_v2_mount_path,
+			sizeof(tmp->path) - 1);
+		tmp->path[sizeof(tmp->path)-1] = '\0';
+		tmp->next = NULL;
+
+		t = cg_cgroup_v2_empty_mount_paths;
+		if (t == NULL) {
+			cg_cgroup_v2_empty_mount_paths = tmp;
+			goto out;
+		}
+
+		while (t->next != NULL)
+			t = t->next;
+
+		t->next = tmp;
 		goto out;
 	}
 
@@ -1336,6 +1364,8 @@ int cgroup_init(void)
 	memset(&cg_mount_table, 0, sizeof(cg_mount_table));
 
 	memset(&cg_cgroup_v2_mount_path, 0, sizeof(cg_cgroup_v2_mount_path));
+	memset(&cg_cgroup_v2_empty_mount_paths, 0,
+	       sizeof(cg_cgroup_v2_empty_mount_paths));
 
 	proc_cgroup = fopen("/proc/cgroups", "re");
 
@@ -5898,6 +5928,110 @@ int cgroup_get_controller_version(const char * const controller,
 	}
 
 	return ECGROUPNOTEXIST;
+}
+
+static int append_to_mnt_point_list(char **mnt_paths, int mnt_paths_sz,
+				      int * const mnt_paths_idx,
+				      const char * const new_mnt_path)
+{
+	if ((*mnt_paths_idx) >= mnt_paths_sz) {
+		cgroup_dbg("Mount points >= MAX_MOUNT_POINTS");
+		return ECGMAXVALUESEXCEEDED;
+	}
+
+	mnt_paths[*mnt_paths_idx] = strdup(new_mnt_path);
+	if (mnt_paths[*mnt_paths_idx] == NULL)
+		return ECGOTHER;
+
+	(*mnt_paths_idx)++;
+	return 0;
+}
+
+/**
+ * List the mount paths, that matches the specified version
+ *
+ *	@param cgrp_version The cgroup type/version
+ *	@param mount_paths Holds the list of mount paths
+ *	@return 0 success and list of mounts paths in mount_paths
+ *		ECGOTHER on failure and mount_paths is NULL.
+ */
+int cgroup_list_mount_points(const enum cg_version_t cgrp_version,
+			     char ***mount_paths)
+{
+	struct cg_mount_point *mount_point;
+	char *mnt_paths[CG_CONTROLLER_MAX];
+	int i, j, idx = 0;
+	int ret = 0;
+
+	if (!cgroup_initialized)
+		return ECGROUPNOTINITIALIZED;
+
+	if (cgrp_version != CGROUP_V1 && cgrp_version != CGROUP_V2)
+		return ECGINVAL;
+
+	memset(mnt_paths, '\0', sizeof(mnt_paths));
+
+	pthread_rwlock_rdlock(&cg_mount_table_lock);
+
+	for (i = 0; cg_mount_table[i].name[0] != '\0'; i++) {
+		if (cg_mount_table[i].version != cgrp_version)
+			continue;
+
+		mount_point = &cg_mount_table[i].mount;
+		while (mount_point) {
+			for (j = 0; j < idx; j++) {
+				if (strcmp(mnt_paths[j],
+					   mount_point->path) == 0)
+					break;
+			}
+
+			/* Append new mount point */
+			if (j == idx) {
+				ret = append_to_mnt_point_list(mnt_paths,
+						CG_CONTROLLER_MAX, &idx,
+						mount_point->path);
+				if (ret) {
+					last_errno = errno;
+					goto err;
+				}
+			}
+			mount_point = mount_point->next;
+		}
+	}
+
+	/*
+	 * Cgroup v2 can be mounted without any controller and these mount
+	 * paths are not part of the cg_mount_table.  Check and append them
+	 * to mnt_paths.
+	 */
+	if (cg_cgroup_v2_empty_mount_paths) {
+		mount_point = cg_cgroup_v2_empty_mount_paths;
+
+		while (mount_point) {
+			ret = append_to_mnt_point_list(mnt_paths,
+					CG_CONTROLLER_MAX, &idx,
+					mount_point->path);
+			if (ret) {
+				last_errno = errno;
+				goto err;
+			}
+			mount_point = mount_point->next;
+		}
+	}
+
+	pthread_rwlock_unlock(&cg_mount_table_lock);
+
+	*mount_paths = mnt_paths;
+
+	return ret;
+
+err:
+	for (j = 0; j < idx; j++)
+		free(mnt_paths[j]);
+
+	pthread_rwlock_unlock(&cg_mount_table_lock);
+
+	return ret;
 }
 
 const struct cgroup_library_version *cgroup_version(void)
