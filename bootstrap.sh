@@ -14,7 +14,7 @@ git submodule update --init --recursive
 
 # configure libcgroup-tests
 pushd tests
-git checkout main
+git checkout issues/random2
 popd
 
 # configure googletest
@@ -29,6 +29,6 @@ autoreconf -fi
 rm -fr autom4te.cache
 
 CFLAGS="$CFLAGS -g -O0" ./configure --sysconfdir=/etc --localstatedir=/var \
-	--enable-opaque-hierarchy="name=systemd"
+	--enable-opaque-hierarchy="name=systemd" --enable-python
 
 make clean
