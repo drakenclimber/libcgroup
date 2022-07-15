@@ -22,8 +22,14 @@ libcgroup_la_SOURCES = parse.h parse.y lex.l api.c config.c libcgroup-internal.h
 		       wrapper.c log.c abstraction-common.c abstraction-common.h \
 		       abstraction-map.c abstraction-map.h abstraction-cpu.c abstraction-cpuset.c \
 		       tools/cgxget.c tools/cgxset.c
+if WITH_SYSTEMD
+libcgroup_la_SOURCES += systemd.c
+endif
 libcgroup_la_LIBADD = -lpthread $(CODE_COVERAGE_LIBS)
 libcgroup_la_CFLAGS = $(CODE_COVERAGE_CFLAGS) -DSTATIC=static -DLIBCG_LIB -fPIC
+if WITH_SYSTEMD
+libcgroup_la_CFLAGS += -DSYSTEMD
+endif
 libcgroup_la_LDFLAGS = -Wl,--version-script,$(srcdir)/libcgroup.map \
 		       -version-number $(VERSION_NUMBER)
 
