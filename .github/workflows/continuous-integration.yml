@@ -27,12 +27,12 @@ jobs:
   # https://github.community/t/how-to-properly-clean-up-self-hosted-runners/128909/3
   cleaner:
     name: Delete Self-Hosted Runner Workspaces
-    runs-on: self-hosted
+    runs-on: cgroup-hybrid
     steps:
       - name: Delete workspace path
         run: |
           echo "Cleaning up previous run"
-          rm -rf "${{ github.workspace }}"
+          #rm -rf "${{ github.workspace }}"
 
   codeql:
     name: CodeQL
