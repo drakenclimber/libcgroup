@@ -10,6 +10,8 @@
 #include <libcgroup.h>
 #include <unistd.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <libgen.h>
 #include <errno.h>
 
 #define USEC_PER_SEC 1000000
@@ -93,6 +95,7 @@ int cgroup_create_scope(const char * const scope_name, const char * const slice_
 	pid_t child_pid;
 	int ret = 0;
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	if (!scope_name || !slice_name || !opts)
 		return ECGINVAL;
 
@@ -112,6 +115,7 @@ int cgroup_create_scope(const char * const scope_name, const char * const slice_
 		cgroup_err("unsupported systemd mode: %d\n", opts->mode);
 		return ECGINVAL;
 	}
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 
 	if (opts->pid < 0) {
 		child_pid = fork();
@@ -134,16 +138,19 @@ int cgroup_create_scope(const char * const scope_name, const char * const slice_
 		}
 
 		cgroup_dbg("created libcgroup_system_idle thread pid %d\n", child_pid);
+		fprintf(stderr, "created libcgroup_system_idle thread pid %d\n", child_pid);
 	} else {
 		child_pid = opts->pid;
 	}
 	cgroup_dbg("pid %d will be placed in scope %s\n", child_pid, scope_name);
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 
 	ret = sd_bus_default_system(&bus);
 	if (ret < 0) {
 		cgroup_err("failed to open the system bus: %d\n", errno);
 		goto out;
 	}
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 
 	ret = sd_bus_match_signal(bus, NULL, sender, path, interface,
 				  "JobRemoved", job_removed_callback, &job_path);
@@ -170,6 +177,7 @@ int cgroup_create_scope(const char * const scope_name, const char * const slice_
 		cgroup_err("failed to open container: %d\n", errno);
 		goto out;
 	}
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 
 	ret = sd_bus_message_append(msg, "(sv)", "Description", "s",
 				    "scope created by libcgroup");
@@ -198,6 +206,7 @@ int cgroup_create_scope(const char * const scope_name, const char * const slice_
 		}
 	}
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	ret = sd_bus_message_close_container(msg);
 	if (ret < 0) {
 		cgroup_err("failed to close the container: %d\n", errno);
@@ -217,6 +226,7 @@ int cgroup_create_scope(const char * const scope_name, const char * const slice_
 		cgroup_err("error message: %s\n", error.message);
 		goto out;
 	}
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 
 	/* Receive the job_path from systemd */
 	ret = sd_bus_message_read(reply, "o", &job_path);
@@ -267,6 +277,7 @@ int cgroup_create_scope(const char * const scope_name, const char * const slice_
 			goto out;
 		}
 	}
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 
 	ret = 0;
 
@@ -280,4 +291,59 @@ out:
 	sd_bus_unref(bus);
 
 	return ret;
+}
+
+int cgroup_create_scope2(struct cgroup *cgroup, int ignore_ownership,
+			 const struct cgroup_systemd_scope_opts * const opts)
+{
+	char *copy1 = NULL, *copy2 = NULL, *slice_name, *scope_name;
+	int error = 0;
+
+	if (!cgroup)
+		return ECGROUPNOTALLOWED;
+
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
+	copy1 = strdup(cgroup->name);
+	if (!copy1) {
+		error = ECGOTHER;
+		goto err;
+	}
+
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
+	scope_name = basename(copy1);
+
+	copy2 = strdup(cgroup->name);
+	if (!copy2) {
+		error = ECGOTHER;
+		goto err;
+	}
+
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
+	slice_name = dirname(copy2);
+	fprintf(stderr, "creating scope %s under slice %s\n", scope_name, slice_name);
+
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
+	error = cgroup_create_scope(scope_name, slice_name, opts);
+	if (error)
+		goto err;
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
+
+	/*
+	 * cgroup_create_cgroup() can gracefully handle EEXIST if the cgroup already exists, so
+	 * let's just call it because it already knows how to manage the ownership of the cgroup
+	 * hierarchy.
+	 */
+	error = cgroup_create_cgroup(cgroup, ignore_ownership);
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
+	if (error)
+		goto err;
+
+err:
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
+	if (copy1)
+		free(copy1);
+	if (copy2)
+		free(copy2);
+
+	return error;
 }

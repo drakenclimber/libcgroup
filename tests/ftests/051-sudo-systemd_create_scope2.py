@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: LGPL-2.1-only
+#
+# Create a systemd scope with an existing PID
+#
+# Copyright (c) 2022 Oracle and/or its affiliates.
+# Author: Tom Hromatka <tom.hromatka@oracle.com>
+#
+
+from cgroup import CgroupVersion as CgroupCliVersion
+from cgroup import Cgroup as CgroupCli
+from libcgroup import Cgroup, Version
+from run import Run, RunError
+from systemd import Systemd
+import ftests
+import consts
+import stat
+import sys
+import os
+
+
+
+import time
+
+pid = None
+CGNAME = 'libcgtests.slice/051delegated.scope'
+
+# Which controller isn't all that important, but it is important that we
+# have a cgroup v2 controller
+CONTROLLER = 'cpu'
+
+
+def prereqs(config):
+    if config.args.container:
+        result = consts.TEST_SKIPPED
+        cause = 'This test cannot be run within a container'
+        return result, cause
+
+    if CgroupCliVersion.get_version(CONTROLLER) != CgroupCliVersion.CGROUP_V2:
+        result = consts.TEST_SKIPPED
+        cause = 'This test requires cgroup v2'
+        return result, cause
+
+    result = consts.TEST_PASSED
+    cause = None
+
+    return result, cause
+
+
+def setup(config):
+    pass
+
+
+def test(config):
+    global pid
+
+    result = consts.TEST_PASSED
+    cause = None
+
+    pid = int(config.process.create_process(config))
+
+    print('before instantiating cg')
+    cg = Cgroup(CGNAME, Version.CGROUP_V2)
+    print('after')
+
+    # TODO - ensure this controller gets enabled within the scope
+    cg.add_controller(CONTROLLER)
+    print('after2')
+    print(cg)
+
+    #cg.set_uid_gid(1234, 1234, 5678, 5678)
+    # dir: 770, ctrl: 700, task: 744
+    #cg.set_permissions(stat.S_IRWXU | stat.S_IRWXG, stat.S_IRWXU,
+    #                   stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
+
+    #cg.create_scope2(ignore_ownership=True, pid=pid)
+    cg.create_scope2(ignore_ownership=True)
+
+    print('after scope')
+    sys.stderr.flush()
+    sys.stdout.flush()
+
+    if not Systemd.is_delegated(config, SCOPE):
+        result = consts.TEST_FAILED
+        cause = 'Cgroup is not delegated'
+
+    return result, cause
+
+
+def teardown(config, result):
+    global pid
+
+    time.sleep(1000)
+    if pid is not None:
+        Run.run(['kill', '-9', str(pid)], shell_bool=True)
+
+    if result != consts.TEST_PASSED:
+        # Something went wrong.  Let's force the removal of the cgroups just to be safe.
+        # Note that this should remove the cgroup, but it won't remove it from systemd's
+        # internal caches, so the system may not return to its 'pristine' prior-to-this-test
+        # state
+        try:
+            CgroupCli.delete(config, None, os.path.join(SLICE, SCOPE))
+        except RunError:
+            pass
+    else:
+        # There is no need to remove the scope.  systemd should automatically remove it
+        # once there are no processes inside of it
+        pass
+
+    return consts.TEST_PASSED, None
+
+
+def main(config):
+    [result, cause] = prereqs(config)
+    if result != consts.TEST_PASSED:
+        return [result, cause]
+
+    try:
+        result = consts.TEST_FAILED
+        setup(config)
+        [result, cause] = test(config)
+    finally:
+        teardown(config, result)
+
+    return [result, cause]
+
+
+if __name__ == '__main__':
+    config = ftests.parse_args()
+    # this test was invoked directly.  run only it
+    config.args.num = int(os.path.basename(__file__).split('-')[0])
+    sys.exit(ftests.main(config))
+
+# vim: set et ts=4 sw=4:

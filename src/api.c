@@ -2640,6 +2640,7 @@ static int _cgroup_create_cgroup(const struct cgroup * const cgroup,
 	char *path = NULL;
 	int error;
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	fts_path[0] = (char *)malloc(FILENAME_MAX);
 	if (!fts_path[0]) {
 		last_errno = errno;
@@ -2648,6 +2649,7 @@ static int _cgroup_create_cgroup(const struct cgroup * const cgroup,
 	fts_path[1] = NULL;
 	path = fts_path[0];
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	if (controller) {
 		if (!cg_build_path(cgroup->name, path, controller->name)) {
 			error = ECGOTHER;
@@ -2681,6 +2683,7 @@ static int _cgroup_create_cgroup(const struct cgroup * const cgroup,
 		}
 	}
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	error = cg_create_control_group(path);
 	if (error)
 		goto err;
@@ -2743,12 +2746,14 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 	int error = 0;
 	int i;
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	if (!cgroup_initialized)
 		return ECGROUPNOTINITIALIZED;
 
 	if (!cgroup)
 		return ECGROUPNOTALLOWED;
 
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 	for (i = 0; i < cgroup->index;	i++) {
 		if (!cgroup_test_subsys_mounted(cgroup->controller[i]->name))
 			return ECGROUPSUBSYSNOTMOUNTED;
@@ -2760,6 +2765,7 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 		if (error)
 			return error;
 	}
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 
 	/*
 	 * XX: One important test to be done is to check, if you have
@@ -2771,6 +2777,7 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 		if (error)
 			return error;
 	}
+	fprintf(stderr, "%s:%d\n", __func__, __LINE__);
 
 	return 0;
 }
