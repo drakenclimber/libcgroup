@@ -23,7 +23,7 @@ import os
 import time
 
 pid = None
-CGNAME = 'libcgtests.slice/051delegated.scope'
+CGNAME = 'libcgtests.slice/054delegated.scope'
 
 # Which controller isn't all that important, but it is important that we
 # have a cgroup v2 controller
@@ -73,14 +73,15 @@ def test(config):
     #cg.set_permissions(stat.S_IRWXU | stat.S_IRWXG, stat.S_IRWXU,
     #                   stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
 
-    #cg.create_scope2(ignore_ownership=True, pid=pid)
-    cg.create_scope2(ignore_ownership=True)
+    cg.create_scope2(ignore_ownership=True, pid=pid)
+    #cg.create_scope2(ignore_ownership=True)
 
     print('after scope')
     sys.stderr.flush()
     sys.stdout.flush()
 
-    if not Systemd.is_delegated(config, SCOPE):
+    print(os.path.basename(CGNAME))
+    if not Systemd.is_delegated(config, os.path.basename(CGNAME)):
         result = consts.TEST_FAILED
         cause = 'Cgroup is not delegated'
 
@@ -90,7 +91,7 @@ def test(config):
 def teardown(config, result):
     global pid
 
-    time.sleep(1000)
+    #time.sleep(1000)
     if pid is not None:
         Run.run(['kill', '-9', str(pid)], shell_bool=True)
 
@@ -100,7 +101,7 @@ def teardown(config, result):
         # internal caches, so the system may not return to its 'pristine' prior-to-this-test
         # state
         try:
-            CgroupCli.delete(config, None, os.path.join(SLICE, SCOPE))
+            CgroupCli.delete(config, None, CGNAME)
         except RunError:
             pass
     else:
