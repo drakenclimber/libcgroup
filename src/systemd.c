@@ -10,6 +10,8 @@
 #include <libcgroup.h>
 #include <unistd.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <libgen.h>
 #include <errno.h>
 
 #define USEC_PER_SEC 1000000
@@ -280,4 +282,51 @@ out:
 	sd_bus_unref(bus);
 
 	return ret;
+}
+
+int cgroup_create_scope2(struct cgroup *cgroup, int ignore_ownership,
+			 const struct cgroup_systemd_scope_opts * const opts)
+{
+	char *copy1 = NULL, *copy2 = NULL, *slice_name, *scope_name;
+	int error = 0;
+
+	if (!cgroup)
+		return ECGROUPNOTALLOWED;
+
+	copy1 = strdup(cgroup->name);
+	if (!copy1) {
+		error = ECGOTHER;
+		goto err;
+	}
+
+	scope_name = basename(copy1);
+
+	copy2 = strdup(cgroup->name);
+	if (!copy2) {
+		error = ECGOTHER;
+		goto err;
+	}
+
+	slice_name = dirname(copy2);
+
+	error = cgroup_create_scope(scope_name, slice_name, opts);
+	if (error)
+		goto err;
+
+	/*
+	 * cgroup_create_cgroup() can gracefully handle EEXIST if the cgroup already exists, so
+	 * let's just call it because it already knows how to manage the ownership of the cgroup
+	 * hierarchy.
+	 */
+	error = cgroup_create_cgroup(cgroup, ignore_ownership);
+	if (error)
+		goto err;
+
+err:
+	if (copy1)
+		free(copy1);
+	if (copy2)
+		free(copy2);
+
+	return error;
 }
