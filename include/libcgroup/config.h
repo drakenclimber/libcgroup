@@ -29,12 +29,55 @@ extern "C" {
  * and applications can benefit from them.
  */
 
+/*
+ * cgroup systemd settings.
+ */
+struct cgroup_systemd_opts {
+	char slice_name[FILENAME_MAX];
+	char scope_name[FILENAME_MAX];
+	int  setdefault;
+	struct cgroup_systemd_opts *next;
+};
+
 /**
  * Load configuration file and mount and create control groups described there.
  * See cgconfig.conf man page for format of the file.
  * @param pathname Name of the configuration file to load.
  */
 int cgroup_config_load_config(const char *pathname);
+
+/**
+ * Parse the systemd default cgroup's relative path from
+ * /var/run/libcgroup/systemd and set it as default delegation cgroup
+ * path, if available.
+ */
+void cgroup_set_default_systemd_cgroup(void);
+
+/**
+ * Parse the systemd delegation settings from the configuration file
+ * and allocate a new cgroup_systemd_opts object.
+ * This function internally calls cgroup_add_systemd_opts() to add the conf and
+ * value to the newly allocated cgroup_systemd_opts object.
+ *
+ * @param conf Name of the systemd delegate setting read from configuration file.
+ * @param value The value of the conf systemd delegate setting.
+ */
+int cgroup_alloc_systemd_opts(const char * const conf, const char * const value);
+
+/**
+ * Parse the systemd delegation settings from the configuration file
+ * and add the conf and value to the last allocate a new cgroup_systemd_opts object
+ * (tail) allocated by cgroup_alloc_systemd_opts()
+ *
+ * @param conf Name of the systemd delegate setting read from configuration file.
+ * @param value The value of the conf systemd delegate setting.
+ */
+int cgroup_add_systemd_opts(const char * const conf, const char * const value);
+
+/**
+ * Free the cgroup_systemd_opts objects allocated by cgroup_alloc_systemd_opts()
+ */
+void cgroup_cleanup_systemd_opts(void);
 
 /**
  * Delete all control groups and unmount all hierarchies.
