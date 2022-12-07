@@ -1674,7 +1674,24 @@ static char *cg_concat_path(const char *pref, const char *suf, char *path)
 /* path value have to have size at least FILENAME_MAX */
 char *cg_build_path_locked(const char *name, char *path, const char *type)
 {
-	int i, ret;
+	/*
+	 * len is the allocation size for path, that stores:
+	 * cg_mount_table[i].mount.path + '/' + cg_namespace_table[i] + '/'
+	 */
+	int i, ret, len = (FILENAME_MAX * 2) + 2;
+	char *_path;
+
+	/*
+	 * Recent gcc are unhappy when sizeof(dest) <= sizeof(src) with
+	 * snprintf()'s.  Alternative is to use strncpy()/strcat(), work
+	 * around it by allocating large temporary space and then
+	 * copy the constructed _path into path.
+	 */
+	_path = malloc(len);
+	if (!_path) {
+		cgroup_err("Failed to allocate memory for _path\n");
+		return NULL;
+	}
 
 	/*
 	 * If no type is specified, and there's a valid cgroup v2 mount, then
@@ -1683,27 +1700,31 @@ char *cg_build_path_locked(const char *name, char *path, const char *type)
 	 * any controller.
 	 */
 	if (!type && strlen(cg_cgroup_v2_mount_path) > 0) {
-		ret = snprintf(path, FILENAME_MAX, "%s/", cg_cgroup_v2_mount_path);
+		ret = snprintf(_path, len, "%s/", cg_cgroup_v2_mount_path);
 		if (ret >= FILENAME_MAX)
-			cgroup_dbg("filename too long: %s/", cg_cgroup_v2_mount_path);
+			cgroup_dbg("filename too long: %s", _path);
+
+		strncpy(path, _path, FILENAME_MAX - 1);
+		path[FILENAME_MAX - 1] = '\0';
 
 		if (name) {
 			char *tmp;
 
 			tmp = strdup(path);
-			if (tmp == NULL)
-				return NULL;
+			if (tmp == NULL) {
+				path = NULL;
+				goto out;
+			}
 
 			cg_concat_path(tmp, name, path);
 			free(tmp);
 		}
-		return path;
+		goto out;
 	}
 
 	for (i = 0; cg_mount_table[i].name[0] != '\0'; i++) {
 		/* Two ways to successfully move forward here:
-		 * 1. The "type" controller matches the name of a mounted
-		 *    controller
+		 * 1. The "type" controller matches the name of a mounted controller.
 		 * 2. The "type" controller requested is "cgroup" and there's
 		 *    a "real" controller mounted as cgroup v2
 		 */
@@ -1712,22 +1733,18 @@ char *cg_build_path_locked(const char *name, char *path, const char *type)
 		     cg_mount_table[i].version == CGROUP_V2)) {
 
 			if (cg_namespace_table[i]) {
-				ret = snprintf(path, FILENAME_MAX, "%s/%s/",
-						cg_mount_table[i].mount.path,
-						cg_namespace_table[i]);
-				if (ret >= FILENAME_MAX) {
-					cgroup_dbg("filename too long:%s/%s/",
-						   cg_mount_table[i].mount.path,
-						   cg_namespace_table[i]);
-				}
+				ret = snprintf(_path, len, "%s/%s/", cg_mount_table[i].mount.path,
+					       cg_namespace_table[i]);
+				if (ret >= FILENAME_MAX)
+					cgroup_dbg("filename too long: %s", _path);
 			} else {
-				ret = snprintf(path, FILENAME_MAX, "%s/",
-					       cg_mount_table[i].mount.path);
-				if (ret >= FILENAME_MAX) {
-					cgroup_dbg("filename too long:%s/",
-						   cg_mount_table[i].mount.path);
-				}
+				ret = snprintf(_path, len, "%s/", cg_mount_table[i].mount.path);
+				if (ret >= FILENAME_MAX)
+					cgroup_dbg("filename too long: %s", _path);
 			}
+
+			strncpy(path, _path, FILENAME_MAX - 1);
+			path[FILENAME_MAX - 1] = '\0';
 
 			if (name) {
 				char *tmp;
@@ -1739,10 +1756,15 @@ char *cg_build_path_locked(const char *name, char *path, const char *type)
 				cg_concat_path(tmp, name, path);
 				free(tmp);
 			}
-			return path;
+			goto out;
 		}
 	}
-	return NULL;
+	path = NULL;
+out:
+	if (_path)
+		free(_path);
+
+	return path;
 }
 
 char *cg_build_path(const char *name, char *path, const char *type)
