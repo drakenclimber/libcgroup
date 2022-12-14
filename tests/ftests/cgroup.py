@@ -123,7 +123,8 @@ class Cgroup(object):
     @staticmethod
     def create(config, controller_list, cgname, user_name=None,
                group_name=None, dperm=None, fperm=None, tperm=None,
-               tasks_user_name=None, tasks_group_name=None, cghelp=False):
+               tasks_user_name=None, tasks_group_name=None, cghelp=False,
+               ignore_systemd=False):
         if isinstance(controller_list, str):
             controller_list = [controller_list]
 
@@ -156,6 +157,9 @@ class Cgroup(object):
         if cghelp:
             cmd.append('-h')
 
+        if ignore_systemd:
+            cmd.append('-b')
+
         if controller_list:
             controllers_and_path = '{}:{}'.format(
                 ','.join(controller_list), cgname)
@@ -171,7 +175,7 @@ class Cgroup(object):
             Run.run(cmd)
 
     @staticmethod
-    def delete(config, controller_list, cgname, recursive=False):
+    def delete(config, controller_list, cgname, recursive=False, ignore_systemd=False):
         if isinstance(controller_list, str):
             controller_list = [controller_list]
 
@@ -193,6 +197,9 @@ class Cgroup(object):
         cmd.append('-g')
         cmd.append(controllers_and_path)
 
+        if ignore_systemd:
+            cmd.append('-b')
+
         if config.args.container:
             config.container.run(cmd)
         else:
@@ -200,7 +207,7 @@ class Cgroup(object):
 
     @staticmethod
     def __set(config, cmd, cgname=None, setting=None, value=None,
-              copy_from=None, cghelp=False):
+              copy_from=None, cghelp=False, ignore_systemd=False):
         if setting is not None or value is not None:
             if isinstance(setting, str) and isinstance(value, str):
                 cmd.append('-r')
@@ -234,6 +241,9 @@ class Cgroup(object):
                 for cg in cgname:
                     cmd.append(cg)
 
+        if ignore_systemd:
+            cmd.append('-b')
+
         if cghelp:
             cmd.append('-h')
 
@@ -244,7 +254,7 @@ class Cgroup(object):
 
     @staticmethod
     def set(config, cgname=None, setting=None, value=None, copy_from=None,
-            cghelp=False):
+            cghelp=False, ignore_systemd=False):
         """cgset equivalent method
 
         The following variants of cgset are being tested by the
@@ -266,12 +276,12 @@ class Cgroup(object):
         cmd.append(Cgroup.build_cmd_path('cgset'))
 
         return Cgroup.__set(config, cmd, cgname, setting, value, copy_from,
-                            cghelp)
+                            cghelp, ignore_systemd)
 
     @staticmethod
     def xset(config, cgname=None, setting=None, value=None, copy_from=None,
              version=CgroupVersion.CGROUP_UNK, cghelp=False,
-             ignore_unmappable=False):
+             ignore_unmappable=False, ignore_systemd=False):
         """cgxset equivalent method
         """
         cmd = list()
@@ -288,16 +298,18 @@ class Cgroup(object):
             cmd.append('-i')
 
         return Cgroup.__set(config, cmd, cgname, setting, value, copy_from,
-                            cghelp)
+                            cghelp, ignore_systemd)
 
     @staticmethod
     def __get(config, cmd, controller=None, cgname=None, setting=None,
               print_headers=True, values_only=False,
-              all_controllers=False, cghelp=False):
+              all_controllers=False, cghelp=False, ignore_systemd=False):
         if not print_headers:
             cmd.append('-n')
         if values_only:
             cmd.append('-v')
+        if ignore_systemd:
+            cmd.append('-b')
 
         if setting is not None:
             if isinstance(setting, str):
@@ -351,7 +363,7 @@ class Cgroup(object):
     @staticmethod
     def get(config, controller=None, cgname=None, setting=None,
             print_headers=True, values_only=False,
-            all_controllers=False, cghelp=False):
+            all_controllers=False, cghelp=False, ignore_systemd=False):
         """cgget equivalent method
 
         Returns:
@@ -377,13 +389,13 @@ class Cgroup(object):
 
         return Cgroup.__get(config, cmd, controller, cgname, setting,
                             print_headers, values_only, all_controllers,
-                            cghelp)
+                            cghelp, ignore_systemd)
 
     @staticmethod
     def xget(config, controller=None, cgname=None, setting=None,
              print_headers=True, values_only=False,
              all_controllers=False, version=CgroupVersion.CGROUP_UNK,
-             cghelp=False, ignore_unmappable=False):
+             cghelp=False, ignore_unmappable=False, ignore_systemd=False):
         """cgxget equivalent method
 
         Returns:
@@ -402,7 +414,7 @@ class Cgroup(object):
 
         return Cgroup.__get(config, cmd, controller, cgname, setting,
                             print_headers, values_only, all_controllers,
-                            cghelp)
+                            cghelp, ignore_systemd)
 
     @staticmethod
     def classify(config, controller, cgname, pid_list, sticky=False,
