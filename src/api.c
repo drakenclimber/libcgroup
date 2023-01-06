@@ -2586,19 +2586,8 @@ int cgroup_create_cgroup(struct cgroup *cgroup, int ignore_ownership)
 			goto err;
 
 		if (version == CGROUP_V2) {
-			char *parent, *dname;
-
-			parent = strdup(path);
-			if (!parent) {
-				error = ECGOTHER;
-				goto err;
-			}
-
-			dname = dirname(parent);
-
-			error = cgroupv2_subtree_control_recursive(dname,
+			error = cgroupv2_subtree_control_recursive(path,
 					cgroup->controller[k]->name, true);
-			free(parent);
 			if (error)
 				goto err;
 		}
