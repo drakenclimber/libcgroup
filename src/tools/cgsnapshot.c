@@ -254,6 +254,7 @@ static int display_permissions(const char *path, const char * const cg_name,
 		if (pw == NULL) {
 			fprintf(stderr, "ERROR: can't get %d user name\n",
 				sba.st_uid);
+			fprintf(of, "}\n}\n");
 			return -1;
 		}
 
@@ -261,6 +262,7 @@ static int display_permissions(const char *path, const char * const cg_name,
 		if (gr == NULL) {
 			fprintf(stderr, "ERROR: can't get %d group name\n",
 				sba.st_gid);
+			fprintf(of, "}\n}\n");
 			return -1;
 		}
 
@@ -275,6 +277,7 @@ static int display_permissions(const char *path, const char * const cg_name,
 		if (pw == NULL) {
 			fprintf(stderr, "ERROR: can't get %d user name\n",
 				sbt.st_uid);
+			fprintf(of, "}\n}\n");
 			return -1;
 		}
 
@@ -282,6 +285,7 @@ static int display_permissions(const char *path, const char * const cg_name,
 		if (gr == NULL) {
 			fprintf(stderr, "ERROR: can't get %d group name\n",
 				sbt.st_gid);
+			fprintf(of, "}\n}\n");
 			return -1;
 		}
 
