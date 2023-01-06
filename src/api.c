@@ -2647,23 +2647,6 @@ static int _cgroup_create_cgroup(const struct cgroup * const cgroup,
 		error = cgroup_get_controller_version(controller->name, &version);
 		if (error)
 			goto err;
-
-		if (version == CGROUP_V2) {
-			char *parent, *dname;
-
-			parent = strdup(path);
-			if (!parent) {
-				error = ECGOTHER;
-				goto err;
-			}
-
-			dname = dirname(parent);
-
-			error = cgroupv2_subtree_control_recursive(dname, controller->name, true);
-			free(parent);
-			if (error)
-				goto err;
-		}
 	} else {
 		if (!cg_build_path(cgroup->name, path, NULL)) {
 			error = ECGOTHER;
@@ -2700,7 +2683,7 @@ static int _cgroup_create_cgroup(const struct cgroup * const cgroup,
 
 	if (controller) {
 		if (version == CGROUP_V2) {
-			error = cgroupv2_subtree_control(base, controller->name, true);
+			error = cgroupv2_subtree_control_recursive(base, controller->name, true);
 			if (error)
 				goto err;
 		}
