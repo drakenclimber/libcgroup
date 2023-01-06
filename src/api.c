@@ -1774,7 +1774,6 @@ STATIC int cgroupv2_controller_enabled(const char * const cg_name,
 				       const char * const ctrl_name)
 {
 	char path[FILENAME_MAX] = {0};
-	char *parent = NULL, *dname;
 	enum cg_version_t version;
 	bool enabled;
 	int error;
@@ -1796,24 +1795,13 @@ STATIC int cgroupv2_controller_enabled(const char * const cg_name,
 	if (!cg_build_path(cg_name, path, ctrl_name))
 		goto err;
 
-	parent = strdup(path);
-	if (!parent) {
-		error = ECGOTHER;
-		goto err;
-	}
-
-	dname = dirname(parent);
-
-	error = cgroupv2_get_subtree_control(dname, ctrl_name, &enabled);
+	error = cgroupv2_get_subtree_control(path, ctrl_name, &enabled);
 	if (error)
 		goto err;
 
 	if (enabled)
 		error = 0;
 err:
-	if (parent)
-		free(parent);
-
 	return error;
 }
 
