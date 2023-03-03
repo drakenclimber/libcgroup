@@ -14,10 +14,11 @@ import ftests
 import sys
 import os
 
-CGNAME = '072cggetcg'
+
+CGNAME = '072cggetcg/childcg'
 CONTROLLERS = ['cpu', 'memory', 'io', 'pids']
 
-CGNAME2 = '072cggetcg2/childcg'
+CGNAME2 = '{}/grandchildcg'.format(CGNAME)
 
 def prereqs(config):
     result = consts.TEST_PASSED
@@ -101,7 +102,11 @@ def test(config):
     # Test 5 - Create a parent/child cgroup with no controllers enabled.  Ensure the user can get
     # the cgroup with no errors.  .get() should populate zero cgroups
     #
+    for ctrl in CONTROLLERS:
+        CgroupCli.set(config, CGNAME, 'cgroup.subtree_control',
+                      '-{}'.format(ctrl), ignore_systemd=True)
     CgroupCli.create(config, None, CGNAME2)
+
     cgempty = Cgroup(CGNAME2, Version.CGROUP_V2)
     cgempty.get()
 
@@ -115,7 +120,6 @@ def test(config):
 
 
 def teardown(config):
-    CgroupCli.delete(config, CONTROLLERS, CGNAME)
     CgroupCli.delete(config, CONTROLLERS, CGNAME2, recursive=True)
 
 
