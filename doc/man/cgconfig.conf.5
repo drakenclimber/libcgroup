@@ -12,7 +12,9 @@ The file consists of
 .I mount
 ,
 .I group
-and
+,
+.I systemd
+, and
 .I default
 sections. These sections can be in arbitrary order and all of them are
 optional. Any line starting with '#' is considered a comment line and
@@ -194,6 +196,58 @@ and other special characters.
 If no
 .I group
 section is specified, no groups are created.
+
+.I systemd
+section has this form:
+.RS
+.nf
+.ft B
+.sp
+systemd {
+.RS
+.ft B
+slice = <slice name>;
+scope = <scope name>;
+[setdefault = true;]
+[pid = <pid>;]
+.RE
+.ft B
+}
+.ft R
+.fi
+.RE
+
+Multiple systemd sections are supported.
+
+.TP
+.B slice name
+Name of the systemd slice where the scope will reside. If the slice does not
+exist, then systemd will create it when the scope is created. The slice name
+must be of the form *.slice, e.g. libcgroup.slice.
+
+.TP
+.B scope name
+Name of the systemd scope that will be created. If the scope already exists,
+then cgconfigparser will not overwrite the existing scope, and the appropriate
+error will be returned to the user. The scope name must be of the form
+*.scope, e.g. database.scope.
+
+.TP
+.B setdefault
+If set, then libcgroup will use the scope and slice in this section as the
+default cgroup path. If setdefault is true in multiple systemd sections,
+libcgroup uses the last one parsed as its default and previous defaults are
+discarded. This default value is used by most libcgroup tools - cgget, etc. -
+and can be overridden if necessary. See Example 9 below.
+
+.TP
+.B pid
+Process ID to be placed in the scope. Systemd will remove any scope that
+doesn't have at least one process in it. If a PID is provided via the
+\fBpid\fR tag, then libcgroup will place that PID in the scope. Otherwise,
+libcgroup will create a process that sleeps infinitely and place it in the
+scope.
+.RE
 
 .I default
 section has this form:
@@ -787,6 +841,82 @@ This is the same as
 mount -t cgroup cgroup -o nodev,nosuid,noexec,cpu /mnt/cgroups/cpu
 It mounts the cpu controller with MS_NODEV, MS_NOSUID and MS_NOEXEC
 options passed.
+
+.SS Example 9
+.LP
+The configuration file:
+
+.LP
+.RS
+.nf
+systemd {
+.RS
+slice = myproduct.slice
+scope = database1.scope
+setdefault = true
+.RE
+}
+
+.fi
+.RE
+
+creates the cgroups myproduct.slice/database1.scope. libcgroup instructs
+systemd that the database1.scope is delegated, and the user is allowed to
+fully modify this cgroup, its processes, and its settings/values. Since no
+PID was provided in the configuration file, libcgroup will place a dummy
+process that sleeps infinitely in the cgroup. systemd will automatically
+delete database1.scope when there are no processes in it or its children.
+
+Since setdefault was provided, the libcgroup tools will utilize the slice and
+scope provided in this configuration when operating on the cgroup hierarchy.
+For example, the following command:
+
+.LP
+.RS
+.nf
+$ cgcreate -g cpu:bgprocesses
+.fi
+.RE
+
+will create a cgroup at /sys/fs/cgroup/myproduct.slice/database1.scope/bgprocesses
+(assuming the cgroup hierarchy is mounted at /sys/fs/cgroup). This cgroup
+can be interacted with via cgget/cgset as usual:
+
+.LP
+.RS
+.nf
+$ cgset -r cpu.weight=42 bgprocesses
+$ cgget -r cpu.weight bgprocesses
+bgprocesses:
+cpu.weight 42
+.fi
+.RE
+
+If a user wants to operate outside of the default systemd hierachy that was
+specified in the configuration file above, they can do so as follows:
+
+.LP
+.RS
+.nf
+$ cgcreate -b -g cpu:outsidesystemd
+.fi
+.RE
+
+This command will create a cgroup at /sys/fs/cgroup/outsidesystemd. Note that
+this violates the kernel's and systemd's single writer rule, and systemd
+reserves the right to modify this cgroup and its processes. \fBProceed at your
+own risk.\fR This cgroup can be interacted with via cgget/cgset, note the
+\fB-b\fR flag:
+
+.LP
+.RS
+.nf
+$ cgset -b -r cpu.weight=123 outsidesystemd
+$ cgget -b -r cpu.weight outsidesystemd
+outsidesystemd:
+cpu.weight 123
+.fi
+.RE
 
 
 .SH RECOMMENDATIONS
