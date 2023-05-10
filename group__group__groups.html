@@ -206,6 +206,12 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>cgroup_convert_cgroup<
 <tr class="separator:gaf5439bb5f149655f682a6438b17877db"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:gac13c5570894e6581bd1ebbdcbb73c74e"><td class="memItemLeft" align="right" valign="top">char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__group__groups.html#gac13c5570894e6581bd1ebbdcbb73c74e">cgroup_get_controller_name</a> (struct <a class="el" href="structcgroup__controller.html">cgroup_controller</a> *controller)</td></tr>
 <tr class="separator:gac13c5570894e6581bd1ebbdcbb73c74e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga5103da236354f658697c730cc6834f07"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__group__groups.html#ga5103da236354f658697c730cc6834f07">is_cgroup_mode_legacy</a> (void)</td></tr>
+<tr class="separator:ga5103da236354f658697c730cc6834f07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga11a48a466c0d4b03d3480cd4d8c830f8"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__group__groups.html#ga11a48a466c0d4b03d3480cd4d8c830f8">is_cgroup_mode_hybrid</a> (void)</td></tr>
+<tr class="separator:ga11a48a466c0d4b03d3480cd4d8c830f8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ga7d360d903d69dfffd6d7a2904882f707"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__group__groups.html#ga7d360d903d69dfffd6d7a2904882f707">is_cgroup_mode_unified</a> (void)</td></tr>
+<tr class="separator:ga7d360d903d69dfffd6d7a2904882f707"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <h2 class="groupheader">Macro Definition Documentation</h2>
@@ -727,7 +733,7 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>cgroup_convert_cgroup<
 </div><div class="memdoc">
 <p >Physically create new control group in kernel, with all parameters and values copied from its parent group. The group is created in all hierarchies, where the parent group exists. I.e. following code creates subgroup in all hierarchies, because all of them have root (=parent) group. </p><div class="fragment"><div class="line"><span class="keyword">struct </span><a class="code hl_struct" href="structcgroup.html">cgroup</a> *foo = <a class="code hl_function" href="group__group__groups.html#gad34c82ead174988d418f3dcb003aaca7">cgroup_new_cgroup</a>(<span class="stringliteral">&quot;foo&quot;</span>);</div>
 <div class="line"><a class="code hl_function" href="group__group__groups.html#ga90e1ce96f3cb540f7e82d076dd938f62">cgroup_create_cgroup_from_parent</a>(foo, 0);</div>
-<div class="ttc" id="agroup__group__groups_html_ga90e1ce96f3cb540f7e82d076dd938f62"><div class="ttname"><a href="group__group__groups.html#ga90e1ce96f3cb540f7e82d076dd938f62">cgroup_create_cgroup_from_parent</a></div><div class="ttdeci">int cgroup_create_cgroup_from_parent(struct cgroup *cgroup, int ignore_ownership)</div><div class="ttdef"><b>Definition:</b> api.c:3081</div></div>
+<div class="ttc" id="agroup__group__groups_html_ga90e1ce96f3cb540f7e82d076dd938f62"><div class="ttname"><a href="group__group__groups.html#ga90e1ce96f3cb540f7e82d076dd938f62">cgroup_create_cgroup_from_parent</a></div><div class="ttdeci">int cgroup_create_cgroup_from_parent(struct cgroup *cgroup, int ignore_ownership)</div><div class="ttdef"><b>Definition:</b> api.c:3082</div></div>
 </div><!-- fragment --> <dl class="todo"><dt><b><a class="el" href="todo.html#_todo000006">Todo:</a></b></dt><dd>what is this good for? Why the list of controllers added by <a class="el" href="group__group__groups.html#ga3929afd6ced9fe877613286b5f06cf8d">cgroup_add_controller()</a> is not used, like in <a class="el" href="group__group__groups.html#gadb8e13df6064841d3c9707960f782fa7">cgroup_create_cgroup()</a>? I can't crate subgroup of root group in just one hierarchy with this function!</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -889,7 +895,7 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>cgroup_convert_cgroup<
 </div><div class="memdoc">
 <p >Read all information regarding the group from kernel. Based on name of the group, list of controllers and all parameters and their values are read from all hierarchies, where a group with given name exists. All existing controllers are replaced. I.e. following code will fill <code>root</code> with controllers from all hierarchies, because the root group is available in all of them. </p><div class="fragment"><div class="line"><span class="keyword">struct </span><a class="code hl_struct" href="structcgroup.html">cgroup</a> *root = <a class="code hl_function" href="group__group__groups.html#gad34c82ead174988d418f3dcb003aaca7">cgroup_new_cgroup</a>(<span class="stringliteral">&quot;/&quot;</span>);</div>
 <div class="line"><a class="code hl_function" href="group__group__groups.html#gad4ba31fe5a8bba63b33b1ea339b849e6">cgroup_get_cgroup</a>(root);</div>
-<div class="ttc" id="agroup__group__groups_html_gad4ba31fe5a8bba63b33b1ea339b849e6"><div class="ttname"><a href="group__group__groups.html#gad4ba31fe5a8bba63b33b1ea339b849e6">cgroup_get_cgroup</a></div><div class="ttdeci">int cgroup_get_cgroup(struct cgroup *cgroup)</div><div class="ttdef"><b>Definition:</b> api.c:3625</div></div>
+<div class="ttc" id="agroup__group__groups_html_gad4ba31fe5a8bba63b33b1ea339b849e6"><div class="ttname"><a href="group__group__groups.html#gad4ba31fe5a8bba63b33b1ea339b849e6">cgroup_get_cgroup</a></div><div class="ttdeci">int cgroup_get_cgroup(struct cgroup *cgroup)</div><div class="ttdef"><b>Definition:</b> api.c:3626</div></div>
 </div><!-- fragment --><dl class="todo"><dt><b><a class="el" href="todo.html#_todo000009">Todo:</a></b></dt><dd>what is this function good for? Why is not considered only the list of controllers attached by <a class="el" href="group__group__groups.html#ga3929afd6ced9fe877613286b5f06cf8d">cgroup_add_controller()</a>? What owners will return <a class="el" href="group__group__groups.html#ga007d21c304d9cc6e948dc0ae51ecfa86">cgroup_get_uid_gid()</a> if the group is in multiple hierarchies, each with different owner of tasks file?</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -1804,6 +1810,63 @@ int&#160;</td><td class="memItemRight" valign="bottom"><b>cgroup_convert_cgroup<
 <p >Get the current group setup mode (legacy/unified/hybrid)</p>
 <dl class="section return"><dt>Returns</dt><dd>CGROUP_MODE_UNK on failure and setup mode on success</dd></dl>
 <p>Finds the current cgroup setup mode (legacy/unified/hybrid). Returns unknown of failure and setup mode on success. </p>
+
+</div>
+</div>
+<a id="ga11a48a466c0d4b03d3480cd4d8c830f8" name="ga11a48a466c0d4b03d3480cd4d8c830f8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga11a48a466c0d4b03d3480cd4d8c830f8">&#9670;&#160;</a></span>is_cgroup_mode_hybrid()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool is_cgroup_mode_hybrid </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p >Return true if cgroup setup mode is cgroup v1/v2 (hybrid), else returns false. </p>
+
+</div>
+</div>
+<a id="ga5103da236354f658697c730cc6834f07" name="ga5103da236354f658697c730cc6834f07"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga5103da236354f658697c730cc6834f07">&#9670;&#160;</a></span>is_cgroup_mode_legacy()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool is_cgroup_mode_legacy </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p >Return true if cgroup setup mode is cgroup v1 (legacy), else returns false. </p>
+
+</div>
+</div>
+<a id="ga7d360d903d69dfffd6d7a2904882f707" name="ga7d360d903d69dfffd6d7a2904882f707"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ga7d360d903d69dfffd6d7a2904882f707">&#9670;&#160;</a></span>is_cgroup_mode_unified()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool is_cgroup_mode_unified </td>
+          <td>(</td>
+          <td class="paramtype">void&#160;</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p >Return true if cgroup setup mode is cgroup v2 (unified), else returns false. </p>
 
 </div>
 </div>
