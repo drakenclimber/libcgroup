@@ -615,6 +615,25 @@ cdef class Cgroup:
         if set_default:
             Cgroup.__set_default_systemd_cgroup()
 
+    @staticmethod
+    def clear_default_systemd_scope():
+        """Clear/Remove the default slice/scope from libcgroup
+
+        Description:
+        Delete the default slice/scope from the libcgroup var/run file.
+        Also deletes the internal static variable within libcgroup, so that
+        the default path is restored back to the root cgroup
+        """
+        try:
+            Cgroup.write_default_systemd_scope('', '')
+        except RuntimeError:
+            pass
+
+        try:
+            Cgroup.__set_default_systemd_cgroup()
+        except RuntimeError:
+            pass
+
     cdef compare(self, Cgroup other):
         """Compare this cgroup instance with another cgroup instance
 
