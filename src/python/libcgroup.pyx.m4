@@ -17,7 +17,9 @@ __date__ = "25 October 2021"
 from posix.types cimport pid_t, mode_t
 from libc.stdlib cimport malloc, free
 from libc.string cimport strcpy
+import libcgrouputils
 cimport cgroup
+import os
 
 CONTROL_NAMELEN_MAX = 32
 
@@ -90,7 +92,7 @@ cdef class Cgroup:
     """ Python object representing a libcgroup cgroup """
     cdef cgroup.cgroup * _cgp
     cdef public:
-        object name, controllers, version
+        object name, controllers, version, path, children, settings, psi, pids, realtime_pct
 
     @staticmethod
     def cgroup_init():
@@ -98,19 +100,20 @@ cdef class Cgroup:
         if ret != 0:
             raise RuntimeError("Failed to initialize libcgroup: {}".`format'(ret))
 
-    def __cinit__(self, name, version):
+    def __cinit__(self, name, version, path=None):
         Cgroup.cgroup_init()
 
         self._cgp = cgroup.cgroup_new_cgroup(c_str(name))
         if self._cgp == NULL:
             raise RuntimeError("Failed to create cgroup {}".`format'(name))
 
-    def __init__(self, name, version):
+    def __init__(self, name, version, path=None):
         """Initialize this cgroup instance
 
         Arguments:
         name - Name of this cgroup
         version - Version of this cgroup
+        path - relative path to the cgroup (optional)
 
         Note:
         Does not modify the cgroup sysfs.  Does not read from the cgroup sysfs
@@ -118,11 +121,28 @@ cdef class Cgroup:
         self.name = name
         self.controllers = dict()
         self.version = version
+        self.path = path
+
+        self.children = list()
+        self.settings = dict()
+        self.psi = dict()
+        self.pids = list()
+
+        self.realtime_pct = None
 
     def __str__(self):
         out_str = "Cgroup {}\n".`format'(self.name)
-        for ctrl_key in self.controllers:
-            out_str += indent(str(self.controllers[ctrl_key]), 4)
+        for key, value in self.controllers.items():
+            out_str += "\n\tcontrollers[{}] = {}".`format'(key, value)
+        out_str += "\n\tpath = {}".`format'(self.path)
+        out_str += "\n\tname = {}".`format'(self.name)
+        out_str += "\n\tchildren = {}".`format'(len(self.children))
+        out_str += "\n\tpids = {}".`format'(len(self.pids))
+        out_str += "\n\trealtime_pct = {5.2f}".`format'(self.realtime_pct)
+        for key, value in self.settings.items():
+            out_str += "\n\tsettings[{}] = {}".`format'(key, value)
+        for key, value in self.psi.items():
+            out_str += "\n\tpsi[{}] = {}".`format'(key, value)
 
         return out_str
 
@@ -822,7 +842,147 @@ cdef class Cgroup:
 
         return cgroup.cgroup_is_systemd_enabled()
 
+    def _parse_psi_line(self, line):
+        entries = line.split()
+        for i, entry in enumerate(entries):
+            if i == 0:
+                continue
+            key = '{}-{}'.`format'(entries[0], entry.split('=')[0])
+
+            if 'total' in key:
+                self.psi[key] = int(entry.split('=')[1])
+            else:
+                self.psi[key] = float(entry.split('=')[1])
+
+    def get_psi(self, controller):
+        """Get the PSI data for this cgroup and controller
+
+        Arguments:
+        controller - PSI data to obtaion - cpu, memory, or io
+        """
+        if not type(CgroupFile):
+            raise CgroupError('PSI data can only be gathered on cgroup directories: {}'.`format'(self.path))
+
+        setting = '{}.pressure'.`format'(controller)
+
+        self.add_setting(setting)
+        self.cgxget()
+
+        for line in self.controllers[controller].settings[setting].splitlines():
+            self._parse_psi_line(line)
+
+    def get_realtime(self):
+        if not type(CgroupFile):
+            raise CgroupError('Realtime data can only be gathered on cgroup directories: {}'.`format'(self.path))
+
+        fpath = os.path.join(self.path, 'cpu.rt_period_us')
+
+        if not os.path.isfile(fpath):
+            self.settings['cpu.rt_period_us'] = None
+            self.settings['cpu.rt_runtime_us'] = None
+            self.realtime_pct = None
+            return
+
+        with open(fpath) as rtf:
+            self.settings['cpu.rt_period_us'] = int(rtf.readline())
+
+        fpath = os.path.join(self.path, 'cpu.rt_runtime_us')
+
+        with open(fpath) as rtf:
+            self.settings['cpu.rt_runtime_us'] = int(rtf.readline())
+
+        self.realtime_pct = 100 * self.settings['cpu.rt_runtime_us'] / self.settings['cpu.rt_period_us']
+
+    def get_setting(self, setting):
+        if not self.is_dir:
+            raise CgroupError('A cgroup setting can only be gathered on cgroup directories: {}'.format(self.path))
+
+        fpath = os.path.join(self.path, setting)
+
+        if not os.path.isfile(fpath):
+            self.settings[setting] = None
+            return
+
+        with open(fpath) as setf:
+            value = setf.readlines()
+
+            if `len'(value) > 1:
+                  self.settings[setting] = ''.join(value)
+                  return
+
+            value = value[0]
+
+            try:
+                  self.settings[setting] = int(value)
+                  return
+            except ValueError:
+                  pass
+
+            try:
+                  self.settings[setting] = float(value)
+                  return
+            except ValueError:
+                  pass
+
+            self.settings[setting] = value
+
     def __dealloc__(self):
         cgroup.cgroup_free(&self._cgp)
+
+class CgroupFile(Cgroup):
+    def __init__(self, name, version, path):
+        super().__init__(name, version, path)
+
+class CgroupPid(object):
+    def __init__(self, pid, command=None):
+        self.pid = pid
+        self.command = command
+        self.pidstats = dict()
+
+    def __str__(self):
+        out_str = 'CgroupPid: {}'.format(self.pid)
+        out_str += '\n\tcommand = {}'.format(self.command)
+        for key, value in self.pidstats.items():
+            out_str += '\n\tpidstats[{}] = {}'.format(key, value)
+
+        return out_str
+
+    @staticmethod
+    def create_from_pidstat(pid):
+        cmd = list()
+        cmd.append('pidstat')
+        cmd.append('-H')
+        cmd.append('-h')
+        cmd.append('-r')
+        cmd.append('-u')
+        cmd.append('-v')
+        cmd.append('-p')
+        cmd.append('{}'.format(pid))
+
+        out = libcgrouputils.run(cmd)
+
+        for line in out.splitlines():
+            if not len(line.strip()):
+                continue
+            if line.startswith('Linux'):
+                # ignore the kernel info
+                continue
+            if line.startswith('#'):
+                line = line.lstrip('#')
+                keys = line.split()
+                continue
+
+            # the last line of pidstat is information regarding the pid
+            values = line.split()
+
+            cgpid = CgroupPid(pid)
+            for i, key in enumerate(keys):
+                cgpid.pidstats[key] = values[i]
+
+            return cgpid
+
+class CgroupError(Exception):
+    def __init__(self, message):
+        super(CgroupError, self).__init__(message)
 
 # vim: set et ts=4 sw=4:

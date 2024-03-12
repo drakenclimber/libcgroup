@@ -23,7 +23,8 @@ PY_BUILD = ${PY_BUILD_@AM_V@}
 PY_INSTALL = ${PY_DISTUTILS} install
 
 EXTRA_DIST = cgroup.pxd.m4 libcgroup.pyx.m4 setup.py.m4 \
-	     cgroup.pxd libcgroup.pyx setup.py
+	     cgroup.pxd libcgroup.pyx setup.py \
+	     libcgrouputils.py libcgrouptree.py
 
 if WITH_SYSTEMD
 M4_FLAGS = -D WITH_SYSTEMD
