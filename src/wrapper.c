@@ -520,7 +520,10 @@ int cgroup_get_value_string(struct cgroup_controller *controller, const char *na
 		struct control_value *val = controller->values[i];
 
 		if (!strcmp(val->name, name)) {
-			*value = strdup(val->value);
+			if (val->multiline_value)
+				*value = strdup(val->multiline_value);
+			else
+				*value = strdup(val->value);
 
 			if (!*value)
 				return ECGOTHER;
