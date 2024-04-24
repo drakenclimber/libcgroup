@@ -19,7 +19,7 @@ runs:
       while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 3; done
       sudo apt-get install libpam-dev lcov python3-pip python3-dev cmake bison flex byacc g++ autoconf automake libtool libsystemd-dev -y
     shell: bash
-  - run: sudo pip install cython
+  - run: sudo pip install cython treelib
     shell: bash
   - run: ./bootstrap.sh
     shell: bash

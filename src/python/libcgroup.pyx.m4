@@ -17,7 +17,10 @@ __date__ = "25 October 2021"
 from posix.types cimport pid_t, mode_t
 from libc.stdlib cimport malloc, free
 from libc.string cimport strcpy
+from treelib import Node, Tree
+import subprocess
 cimport cgroup
+import os
 
 CONTROL_NAMELEN_MAX = 32
 
@@ -90,7 +93,7 @@ cdef class Cgroup:
     """ Python object representing a libcgroup cgroup """
     cdef cgroup.cgroup * _cgp
     cdef public:
-        object name, controllers, version
+        object name, controllers, version, path, children, settings, pids
 
     @staticmethod
     def cgroup_init():
@@ -98,19 +101,20 @@ cdef class Cgroup:
         if ret != 0:
             raise RuntimeError("Failed to initialize libcgroup: {}".`format'(ret))
 
-    def __cinit__(self, name, version):
+    def __cinit__(self, name, version, path=None):
         Cgroup.cgroup_init()
 
         self._cgp = cgroup.cgroup_new_cgroup(c_str(name))
         if self._cgp == NULL:
             raise RuntimeError("Failed to create cgroup {}".`format'(name))
 
-    def __init__(self, name, version):
+    def __init__(self, name, version, path=None):
         """Initialize this cgroup instance
 
         Arguments:
         name - Name of this cgroup
         version - Version of this cgroup
+        path - relative path to the cgroup (optional)
 
         Note:
         Does not modify the cgroup sysfs.  Does not read from the cgroup sysfs
@@ -118,11 +122,22 @@ cdef class Cgroup:
         self.name = name
         self.controllers = dict()
         self.version = version
+        self.path = path
+
+        self.children = list()
+        self.settings = dict()
+        self.pids = list()
 
     def __str__(self):
         out_str = "Cgroup {}\n".`format'(self.name)
-        for ctrl_key in self.controllers:
-            out_str += indent(str(self.controllers[ctrl_key]), 4)
+        for key, value in self.controllers.items():
+            out_str += indent("controllers[{}] = {}\n".`format'(key, value), 4)
+        out_str += indent("path = {}\n".`format'(self.path), 4)
+        out_str += indent("name = {}\n".`format'(self.name), 4)
+        out_str += indent("children = {}\n".`format'(`len'(self.children)), 4)
+        out_str += indent("pids = {}\n".`format'(`len'(self.pids)), 4)
+        for key, value in self.settings.items():
+            out_str += indent("settings[{}] = {}\n".`format'(key, value), 4)
 
         return out_str
 
@@ -822,7 +837,389 @@ cdef class Cgroup:
 
         return cgroup.cgroup_is_systemd_enabled()
 
+    def get_setting(self, setting):
+        if not self.is_dir:
+            raise CgroupError('A cgroup setting can only be gathered on cgroup directories: {}'.format(self.path))
+
+        fpath = os.path.join(self.path, setting)
+
+        if not os.path.isfile(fpath):
+            self.settings[setting] = None
+            return
+
+        with open(fpath) as setf:
+            value = setf.readlines()
+
+            if `len'(value) > 1:
+                  self.settings[setting] = ''.join(value)
+                  return
+
+            value = value[0]
+
+            try:
+                  self.settings[setting] = int(value)
+                  return
+            except ValueError:
+                  pass
+
+            try:
+                  self.settings[setting] = float(value)
+                  return
+            except ValueError:
+                  pass
+
+            self.settings[setting] = value
+
     def __dealloc__(self):
         cgroup.cgroup_free(&self._cgp)
+
+class CgroupFile(Cgroup):
+    def __init__(self, name, version, path):
+        super().__init__(name, version, path)
+
+class CgroupPid(object):
+    def __init__(self, pid, command=None):
+        self.pid = pid
+        self.command = command
+        self.pidstats = dict()
+
+    def __str__(self):
+        out_str = 'CgroupPid: {}'.format(self.pid)
+        out_str += '\n\tcommand = {}'.format(self.command)
+        for key, value in self.pidstats.items():
+            out_str += '\n\tpidstats[{}] = {}'.format(key, value)
+
+        return out_str
+
+    @staticmethod
+    def create_from_pidstat(pid):
+        cmd = list()
+        cmd.append('pidstat')
+        cmd.append('-H')
+        cmd.append('-h')
+        cmd.append('-r')
+        cmd.append('-u')
+        cmd.append('-v')
+        cmd.append('-p')
+        cmd.append('{}'.format(pid))
+
+        out = run(cmd)
+
+        for line in out.splitlines():
+            if not `len'(line.strip()):
+                continue
+            if line.startswith('Linux'):
+                # ignore the kernel info
+                continue
+            if line.startswith('#'):
+                line = line.lstrip('#')
+                keys = line.split()
+                continue
+
+            # the last line of pidstat is information regarding the pid
+            values = line.split()
+
+            cgpid = CgroupPid(pid)
+            for i, key in enumerate(keys):
+                cgpid.pidstats[key] = values[i]
+
+            return cgpid
+
+class CgroupError(Exception):
+    def __init__(self, message):
+        super(CgroupError, self).__init__(message)
+
+class LibcgroupTree(object):
+    def __get_mount(self):
+        mount_list = Cgroup.mount_points(self.version)
+
+        for mount in mount_list:
+            if self.version == Version.CGROUP_V2:
+                return mount
+            else:
+                controllers = mount.split('/')[-1]
+                for controller in controllers.split(','):
+                    if controller == self.controller:
+                        return mount
+
+        return None
+
+    def __init__(self, name=None, version=Version.CGROUP_V2, controller='cpu', depth=None,
+                 files=None):
+        self.version = version
+        self.controller = controller
+        self.mount = self.__get_mount()
+
+        if name:
+            self.name = name
+            self.start_path = os.path.join(self.mount, self.name)
+        else:
+            self.name = '/'
+            self.start_path = self.mount
+
+        self.rootcg = Cgroup(name=self.name, path=self.start_path, version=version)
+
+        self.files = files
+        self.depth = depth
+
+    def walk(self):
+        if self.depth is not None:
+            max_slash_cnt = self.start_path.count('/') + self.depth + 1
+        else:
+            max_slash_cnt = os.pathconf('/', 'PC_NAME_MAX')
+
+        for root, dirs, filenames in os.walk(self.start_path):
+            if root == self.start_path:
+                continue
+            if root.count('/') >= max_slash_cnt:
+                continue
+
+            cg = Cgroup(name=root[`len'(self.mount) + 1:], path=root, version=self.version)
+            self.walk_action(cg)
+
+            if self.files:
+                for filename in filenames:
+                    cgf = CgroupFile(name=filename, path=os.path.join(root, filename))
+                    self.walk_action(cgf)
+
+    # This function can be overridden to do custom actions
+    def walk_action(self, cg):
+        parent_path = os.path.dirname(cg.path)
+        parentcg = self.find_parent_by_path(parent_path)
+        parentcg.children.append(cg)
+
+    def find_cg_by_path(self, cg_path, cg):
+        for child in cg.children:
+            if child.path == cg_path:
+                return child
+
+            next = self.find_cg_by_path(cg_path, child)
+            if next:
+                return next
+
+        return None
+
+    def find_parent_by_path(self, parent_path):
+        if parent_path == self.start_path:
+            return self.rootcg
+
+        parent = self.find_cg_by_path(parent_path, self.rootcg)
+        if not parent:
+            raise CgroupError('Failed to find cgroup with path {}'.format(parent_path))
+
+        return parent
+
+    # This function can be overridden to display custom data in the tree
+    def node_label(self, cg):
+        name = os.path.basename(cg.name)
+        if not `len'(name):
+            name = '/'
+
+        return name
+
+    def build(self):
+        self.tree = Tree()
+
+        self.tree.create_node(self.node_label(self.rootcg), self.rootcg.path)
+
+        self.add_nodes(self.rootcg)
+
+    def add_nodes(self, cg):
+        for child in cg.children:
+            self.tree.create_node(self.node_label(child), child.path, parent=cg.path)
+
+            self.add_nodes(child)
+
+    def show(self, ascii=False):
+        if (ascii):
+            self.tree.show(line_type='ascii')
+        else:
+            self.tree.show()
+
+float_metrics = ['%usr', '%system', '%guest', '%wait', '%CPU', '%MEM', 'minflt/s', 'majflt/s']
+int_metrics = ['Time', 'UID', 'PID', 'CPU', 'RSS', 'threads', 'fd-nr']
+str_metrics = ['Command']
+
+class LibcgroupList(LibcgroupTree):
+    def __init__(self, name, version=Version.CGROUP_V2, controller='cpu', depth=None,
+                 metric='%CPU', threshold=1.0, limit=None):
+        super().__init__(name, version, controller, depth=depth, files=False)
+
+        self.metric = metric
+        self.threshold = threshold
+        self.cgpid_list = list()
+        self.limit = limit
+
+    def walk_action(self, cg):
+        cg.get_pids()
+
+        for pid in cg.pids:
+            cgpid = LibcgroupPid.create_from_pidstat(pid)
+
+            try:
+                cgpid.cgroup = cg.path[`len'(self.start_path):]
+
+                if self.metric in float_metrics:
+                   if float(cgpid.pidstats[self.metric]) >= self.threshold:
+                        self.cgpid_list.append(cgpid)
+
+                elif self.metric in int_metrics:
+                    if int(cgpid.pidstats[self.metric]) >= self.threshold:
+                        self.cgpid_list.append(cgpid)
+
+                else:
+                    self.cgpid_list.append(cgpid)
+
+            except AttributeError:
+                # The pid could have been deleted between when we read cgroup.procs
+                # and when we ran pidstat.  Ignore it and move on
+                pass
+
+    def sort(self):
+        if self.metric in float_metrics:
+            self.cgpid_list = sorted(self.cgpid_list, reverse=True,
+                                     key=lambda cgpid: float(cgpid.pidstats[self.metric]))
+
+        elif self.metric in int_metrics:
+            self.cgpid_list = sorted(self.cgpid_list, reverse=True,
+                                     key=lambda cgpid: int(cgpid.pidstats[self.metric]))
+
+        else:
+            self.cgpid_list = sorted(self.cgpid_list, reverse=True,
+                                     key=lambda cgpid: cgpid.pidstats[self.metric])
+
+    def show(self, sort=True):
+        if sort:
+            self.sort()
+
+        print('{0: >10} {1: >16}  {2: >8} {3: <50}'.`format'(
+            'PID', 'COMMAND', self.metric, 'CGROUP'))
+
+        for i, cgpid in enumerate(self.cgpid_list):
+            if self.limit and i >= self.limit:
+                break
+
+            if self.metric in float_metrics:
+                print('{0: >10} {1: >16} {2: 9.2f} {3: <50}'.`format'(cgpid.pid,
+                      cgpid.pidstats['Command'], float(cgpid.pidstats[self.metric]),
+                      cgpid.cgroup))
+            elif self.metric in int_metrics:
+                print('{0: >10} {1: >16}    {2: 7d} {3: <50}'.`format'(cgpid.pid,
+                      cgpid.pidstats['Command'], int(cgpid.pidstats[self.metric]),
+                      cgpid.cgroup))
+            else:
+                print('{0: >10} {1: >16}    {2: >6} {3: <50}'.`format'(cgpid.pid,
+                      cgpid.pidstats['Command'], cgpid.pidstats[self.metric],
+                      cgpid.cgroup))
+
+class LibcgroupPid(object):
+    def __init__(self, pid, command=None):
+        self.pid = pid
+        self.command = command
+        self.pidstats = dict()
+
+    def __str__(self):
+        out_str = 'LibcgroupPid: {}'.`format'(self.pid)
+        out_str += '\n\tcommand = {}'.`format'(self.command)
+        for key, value in self.pidstats.items():
+            out_str += '\n\tpidstats[{}] = {}'.`format'(key, value)
+
+        return out_str
+
+    @staticmethod
+    def create_from_pidstat(pid):
+        cmd = list()
+        cmd.append('pidstat')
+        cmd.append('-H')
+        cmd.append('-h')
+        cmd.append('-r')
+        cmd.append('-u')
+        cmd.append('-v')
+        cmd.append('-p')
+        cmd.append('{}'.`format'(pid))
+
+        out = run(cmd)
+
+        for line in out.splitlines():
+            if not `len'(line.strip()):
+                continue
+            if line.startswith('Linux'):
+                # ignore the kernel info
+                continue
+            if line.startswith('#'):
+                line = line.lstrip('#')
+                keys = line.split()
+                continue
+
+            # the last line of pidstat is information regarding the pid
+            values = line.split()
+
+            cgpid = LibcgroupPid(pid)
+            for i, key in enumerate(keys):
+                cgpid.pidstats[key] = values[i]
+
+            return cgpid
+
+def run(command, run_in_shell=False):
+    if run_in_shell:
+        if isinstance(command, str):
+            # nothing to do.  command is already formatted as a string
+            pass
+        elif isinstance(command, list):
+            command = ' '.join(command)
+        else:
+            raise ValueError('Unsupported command type')
+
+    subproc = subprocess.Popen(command, shell=run_in_shell,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    out, err = subproc.communicate()
+    ret = subproc.returncode
+
+    out = out.strip().decode('UTF-8')
+    err = err.strip().decode('UTF-8')
+
+    if ret != 0 or `len'(err) > 0:
+        raise RunError("Command '{}' failed".`format'(''.join(command)),
+                       command, ret, out, err)
+
+    return out
+
+def humanize(value):
+    if type(value) is not int:
+        raise TypeError('Unsupported type {}'.`format'(type(value)))
+
+    if value < 1024:
+        return value
+    elif value < 1024 ** 2:
+        value = value / 1024
+        return '{}K'.`format'(int(value))
+    elif value < 1024 ** 3:
+        value = value / (1024 ** 2)
+        return '{}M'.`format'(int(value))
+    elif value < 1024 ** 4:
+        value = value / (1024 ** 3)
+        return '{}G'.`format'(int(value))
+    elif value < 1024 ** 5:
+        value = value / (1024 ** 4)
+        return '{}T'.`format'(int(value))
+    else:
+        return value
+
+class RunError(Exception):
+    def __init__(self, message, command, ret, stdout, stderr):
+        super(RunError, self).__init__(message)
+
+        self.command = command
+        self.ret = ret
+        self.stdout = stdout
+        self.stderr = stderr
+
+    def __str__(self):
+        out_str = 'RunError:\n\tcommand = {}\n\tret = {}'.`format'(
+                  self.command, self.ret)
+        out_str += '\n\tstdout = {}\n\tstderr = {}'`.format'(self.stdout,
+                                                             self.stderr)
+        return out_str
 
 # vim: set et ts=4 sw=4:

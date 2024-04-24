@@ -186,7 +186,7 @@ jobs:
       run: |
         sudo apt-get install libpam-dev lcov python3-pip python3-dev cmake bison flex byacc g++ autoconf automake libtool lcov -y
     - name: Install cython
-      run: sudo pip install cython
+      run: sudo pip install cython treelib
     - name: Initialize submodules
       run: |
         git submodule update --init --recursive
