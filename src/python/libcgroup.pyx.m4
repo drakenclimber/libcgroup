@@ -93,7 +93,7 @@ cdef class Cgroup:
     """ Python object representing a libcgroup cgroup """
     cdef cgroup.cgroup * _cgp
     cdef public:
-        object name, controllers, version, path, children, settings, pids
+        object name, controllers, version, path, children, settings, pids, psi
 
     @staticmethod
     def cgroup_init():
@@ -127,6 +127,7 @@ cdef class Cgroup:
         self.children = list()
         self.settings = dict()
         self.pids = list()
+        self.psi = dict()
 
     def __str__(self):
         out_str = "Cgroup {}\n".`format'(self.name)
@@ -138,6 +139,8 @@ cdef class Cgroup:
         out_str += indent("pids = {}\n".`format'(`len'(self.pids)), 4)
         for key, value in self.settings.items():
             out_str += indent("settings[{}] = {}\n".`format'(key, value), 4)
+        for key, value in self.psi.items():
+            out_str += indent("psi[{}] = {}\n".`format'(key, value), 4)
 
         return out_str
 
@@ -870,6 +873,35 @@ cdef class Cgroup:
 
             self.settings[setting] = value
 
+    def _parse_psi_line(self, line):
+        entries = line.split()
+        for i, entry in enumerate(entries):
+            if i == 0:
+                continue
+            key = '{}-{}'.`format'(entries[0], entry.split('=')[0])
+
+            if 'total' in key:
+                self.psi[key] = int(entry.split('=')[1])
+            else:
+                self.psi[key] = float(entry.split('=')[1])
+
+    def get_psi(self, controller):
+        """Get the PSI data for this cgroup and controller
+
+        Arguments:
+        controller - PSI data to obtain - cpu, memory, or io
+        """
+        if not type(CgroupFile):
+            raise CgroupError('PSI data can only be gathered on cgroup directories: {}'.`format'(self.path))
+
+        setting = '{}.pressure'.`format'(controller)
+
+        self.add_setting(setting)
+        self.cgxget()
+
+        for line in self.controllers[controller].settings[setting].splitlines():
+            self._parse_psi_line(line)
+
     def __dealloc__(self):
         cgroup.cgroup_free(&self._cgp)
 
@@ -1035,6 +1067,24 @@ class LibcgroupTree(object):
             self.tree.show(line_type='ascii')
         else:
             self.tree.show()
+
+class LibcgroupPsiTree(LibcgroupTree):
+    def __init__(self, name, controller='cpu', depth=None, psi_field='some-avg10'):
+        super().__init__(name, version=Version.CGROUP_V2, files=False, depth=depth)
+
+        self.rootcg.get_psi(controller)
+        self.psi_field = psi_field
+
+    def walk_action(self, cg):
+        cg.get_psi(self.controller)
+        super().walk_action(cg)
+
+    def node_label(self, cg):
+        name = os.path.basename(cg.name)
+        if not `len'(name):
+            name = '/'
+
+        return '{}: {}'.`format'(name, cg.psi[self.psi_field])
 
 float_metrics = ['%usr', '%system', '%guest', '%wait', '%CPU', '%MEM', 'minflt/s', 'majflt/s']
 int_metrics = ['Time', 'UID', 'PID', 'CPU', 'RSS', 'threads', 'fd-nr']
