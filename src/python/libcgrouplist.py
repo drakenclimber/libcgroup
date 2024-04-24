@@ -153,3 +153,78 @@ class LibcgroupPsiList(LibcgroupTree):
             self._show_int()
         else:
             self._show_float()
+
+class LibcgroupRealtimeList(LibcgroupTree):
+    def __init__(self, name, depth=None, limit=None):
+        super().__init__(name, version=Version.CGROUP_V1, controller='cpu',
+                         depth=depth)
+
+        self.rootcg.get_realtime()
+        self.cglist = list()
+        self.limit = limit
+
+    def walk_action(self, cg):
+        cg.get_realtime()
+
+        if cg.settings['cpu.rt_runtime_us']:
+            self.cglist.append(cg)
+
+    def sort(self):
+        self.cglist = sorted(self.cglist, reverse=True,
+                             key=lambda cg: cg.realtime_pct)
+
+    def show(self, sort=True, verbose=True):
+        total_pct = 0.0
+
+        if sort:
+            self.sort()
+
+        print('{0: >7} {1: >7} {2: >7} {3: <20}'.format('RUNTIME', 'PERIOD', 'PERCENT', 'CGROUP'))
+
+        for i, cg in enumerate(self.cglist):
+            # Only add the realtime of the direct children of the root cgroup.
+            # Grandchildren realtime allocations are accounted for in their
+            # parents' realtime allocations.
+            if cg.path[len(self.rootcg.path):].count('/') == 1:
+                total_pct += cg.realtime_pct
+
+            if self.limit and i >= self.limit:
+                  continue
+
+            print('{0: >7} {1: >7}  {2: >5.2f}% {3: <20}'.format(
+                  cg.settings['cpu.rt_runtime_us'],
+                  cg.settings['cpu.rt_period_us'],
+                  cg.realtime_pct,
+                  cg.path[len(self.start_path):]))
+
+        if verbose:
+            print('\n{0:,} / {1:,} microseconds ({2: >5.2f}%) of the CPU '
+                  'cycles have been allocated to realtime in the root '
+                  'cgroup.'.format(
+                  self.rootcg.settings['cpu.rt_runtime_us'],
+                  self.rootcg.settings['cpu.rt_period_us'],
+                  self.rootcg.realtime_pct))
+
+            if self.mount == self.start_path:
+                alloc_path = 'the root cgroup'
+                tmpcg = self.rootcg
+            else:
+                alloc_path = self.rootcg.path[len(self.mount):]
+                tmpcg = self.rootcg
+
+            percent_consumed = 100 * total_pct / tmpcg.realtime_pct
+            print('\n{0:,} of the {1:,} realtime cycles ({2: >5.2f}%) for {3:} '
+                  'have been assigned to children cgroups'.format(
+                  int(percent_consumed * tmpcg.settings['cpu.rt_runtime_us'] / 100),
+                  tmpcg.settings['cpu.rt_runtime_us'],
+                  percent_consumed,
+                  alloc_path))
+
+            print('\n{0:,} (cpu.rt_runtime_us) / {1:,} (cpu.rt_period_us) '
+                  'microseconds can still be assigned to a child of {2:}'.format(
+                  max(int((tmpcg.realtime_pct - total_pct) * 10000), 0),
+                  1000000,
+                  alloc_path))
+
+            print('\nNote that the remaining cpu.rt_runtime_us is estimated '
+                  'and could be off by 1 or 2 in either direction.\n')

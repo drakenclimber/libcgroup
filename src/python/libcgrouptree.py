@@ -27,8 +27,10 @@ class LibcgroupTree(object):
             if self.version == Version.CGROUP_V2:
                 return mount
             else:
-                if mount.endswith(controller) or mount.find('{},'.format(controller)):
-                    return mount
+                controllers = mount.split('/')[-1]
+                for controller in controllers.split(','):
+                    if controller == self.controller:
+                        return mount
 
         return None
 
@@ -141,3 +143,24 @@ class LibcgroupPsiTree(LibcgroupTree):
             name = '/'
 
         return '{}: {}'.format(name, cg.psi[self.psi_field])
+
+class LibcgroupRealtimeTree(LibcgroupTree):
+    def __init__(self, name, depth=None):
+        super().__init__(name, version=Version.CGROUP_V1, files=False, depth=depth,
+                         controller='cpu')
+
+        self.rootcg.get_realtime()
+
+    def walk_action(self, cg):
+        cg.get_realtime()
+
+        if cg.settings['cpu.rt_runtime_us']:
+            super().walk_action(cg)
+
+    def node_label(self, cg):
+        name = os.path.basename(cg.name)
+        if not len(name):
+            name = '/'
+
+        return '{}: {} / {}'.format(name, cg.settings['cpu.rt_runtime_us'],
+                                    cg.settings['cpu.rt_period_us'])
