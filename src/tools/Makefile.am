@@ -73,6 +73,7 @@ if ENABLE_PYTHON
 EXTRA_DIST = \
 	cgpsilist.py \
 	cgpsitree.py \
+	cgrealtimelist.py \
 	cgrealtimetree.py
 endif
 
