@@ -93,7 +93,7 @@ cdef class Cgroup:
     """ Python object representing a libcgroup cgroup """
     cdef cgroup.cgroup * _cgp
     cdef public:
-        object name, controllers, version, path, children, settings, pids, psi
+        object name, controllers, version, path, children, settings, pids, psi, realtime_pct
 
     @staticmethod
     def cgroup_init():
@@ -128,6 +128,7 @@ cdef class Cgroup:
         self.settings = dict()
         self.pids = list()
         self.psi = dict()
+        self.realtime_pct = None
 
     def __str__(self):
         out_str = "Cgroup {}\n".`format'(self.name)
@@ -141,6 +142,7 @@ cdef class Cgroup:
             out_str += indent("settings[{}] = {}\n".`format'(key, value), 4)
         for key, value in self.psi.items():
             out_str += indent("psi[{}] = {}\n".`format'(key, value), 4)
+        out_str += indent("realtime_pct = {5.2f}".`format'(self.realtime_pct), 4)
 
         return out_str
 
@@ -902,6 +904,28 @@ cdef class Cgroup:
         for line in self.controllers[controller].settings[setting].splitlines():
             self._parse_psi_line(line)
 
+    def get_realtime(self):
+        if not type(CgroupFile):
+            raise CgroupError('Realtime data can only be gathered on cgroup directories: {}'.`format'(self.path))
+
+        fpath = os.path.join(self.path, 'cpu.rt_period_us')
+
+        if not os.path.isfile(fpath):
+            self.settings['cpu.rt_period_us'] = None
+            self.settings['cpu.rt_runtime_us'] = None
+            self.realtime_pct = None
+            return
+
+        with open(fpath) as rtf:
+            self.settings['cpu.rt_period_us'] = int(rtf.readline())
+
+        fpath = os.path.join(self.path, 'cpu.rt_runtime_us')
+
+        with open(fpath) as rtf:
+            self.settings['cpu.rt_runtime_us'] = int(rtf.readline())
+
+        self.realtime_pct = 100 * self.settings['cpu.rt_runtime_us'] / self.settings['cpu.rt_period_us']
+
     def __dealloc__(self):
         cgroup.cgroup_free(&self._cgp)
 
@@ -1085,6 +1109,27 @@ class LibcgroupPsiTree(LibcgroupTree):
             name = '/'
 
         return '{}: {}'.`format'(name, cg.psi[self.psi_field])
+
+class LibcgroupRealtimeTree(LibcgroupTree):
+    def __init__(self, name, depth=None):
+        super().__init__(name, version=Version.CGROUP_V1, files=False, depth=depth,
+                         controller='cpu')
+
+        self.rootcg.get_realtime()
+
+    def walk_action(self, cg):
+        cg.get_realtime()
+
+        if cg.settings['cpu.rt_runtime_us']:
+            super().walk_action(cg)
+
+    def node_label(self, cg):
+        name = os.path.basename(cg.name)
+        if not `len'(name):
+            name = '/'
+
+        return '{}: {} / {}'.`format'(name, cg.settings['cpu.rt_runtime_us'],
+                                      cg.settings['cpu.rt_period_us'])
 
 float_metrics = ['%usr', '%system', '%guest', '%wait', '%CPU', '%MEM', 'minflt/s', 'majflt/s']
 int_metrics = ['Time', 'UID', 'PID', 'CPU', 'RSS', 'threads', 'fd-nr']

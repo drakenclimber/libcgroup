@@ -72,7 +72,8 @@ cgsnapshot_CFLAGS = $(CODE_COVERAGE_CFLAGS) $(EXTRA_CFLAGS)
 if ENABLE_PYTHON
 EXTRA_DIST = \
 	cgpsilist.py \
-	cgpsitree.py
+	cgpsitree.py \
+	cgrealtimetree.py
 endif
 
 install-exec-hook:
