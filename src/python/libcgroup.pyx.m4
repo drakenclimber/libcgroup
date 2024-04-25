@@ -1162,6 +1162,59 @@ class LibcgroupList(LibcgroupTree):
                       cgpid.pidstats['Command'], cgpid.pidstats[self.metric],
                       cgpid.cgroup))
 
+class LibcgroupPsiList(LibcgroupTree):
+    def __init__(self, name, controller='cpu', depth=None, psi_field='some-avg10',
+                 threshold=None, limit=None):
+        super().__init__(name, version=Version.CGROUP_V2, controller=controller,
+                         depth=depth)
+
+        self.controller = controller
+        self.psi_field = psi_field
+        self.cglist = list()
+        self.threshold = threshold
+        self.limit = limit
+
+    def walk_action(self, cg):
+        cg.get_psi(self.controller)
+
+        if not self.threshold:
+            self.cglist.append(cg)
+        elif cg.psi[self.psi_field] >= self.threshold:
+            self.cglist.append(cg)
+
+    def sort(self):
+        self.cglist = sorted(self.cglist, reverse=True,
+                             key=lambda cg: cg.psi[self.psi_field])
+
+    def _show_float(self):
+        print('{0: >10} {1: >3} {2: <16}'.`format'(self.psi_field, 'PSI', 'CGROUP'))
+
+        for i, cg in enumerate(self.cglist):
+            if self.limit and i >= self.limit:
+                break
+
+            print('        {0: 6.2f} {1: <16}'.`format'(cg.psi[self.psi_field],
+                                                        cg.path[`len'(self.start_path):]))
+
+    def _show_int(self):
+        print('{0: >10} {1: >3} {2: <16}'.`format'(self.psi_field, 'PSI', 'CGROUP'))
+
+        for i, cg in enumerate(self.cglist):
+            if self.limit and i >= self.limit:
+                break
+
+            print('   {0: 11d} {1: <16}'.`format'(cg.psi[self.psi_field],
+                                                  cg.path[`len'(self.start_path):]))
+
+    def show(self, sort=True):
+        if sort:
+            self.sort()
+
+        if 'total' in self.psi_field:
+            self._show_int()
+        else:
+            self._show_float()
+
 class LibcgroupPid(object):
     def __init__(self, pid, command=None):
         self.pid = pid
