@@ -112,6 +112,8 @@ $(function() {
 </td></tr>
 <tr class="memitem:ga64f7967d6d5edfff9afddaa6a6974b1c" id="r_ga64f7967d6d5edfff9afddaa6a6974b1c"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__group__tasks.html#ga64f7967d6d5edfff9afddaa6a6974b1c">cgroup_register_unchanged_process</a> (pid_t pid, int flags)</td></tr>
 <tr class="separator:ga64f7967d6d5edfff9afddaa6a6974b1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:gabdb49127e5959831abb3a03e384c3dee" id="r_gabdb49127e5959831abb3a03e384c3dee"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__group__tasks.html#gabdb49127e5959831abb3a03e384c3dee">cgroup_attach_thread_tid</a> (struct <a class="el" href="structcgroup.html">cgroup</a> *<a class="el" href="structcgroup.html">cgroup</a>, pid_t tid)</td></tr>
+<tr class="separator:gabdb49127e5959831abb3a03e384c3dee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <h2 class="groupheader">Function Documentation</h2>
@@ -174,6 +176,43 @@ $(function() {
   </dd>
 </dl>
 <p>cgroup_attach_task_pid is used to assign tasks to a cgroup. struct cgroup *cgroup: The cgroup to assign the thread to. pid_t tid: The thread to be assigned to the cgroup.</p>
+<p>returns 0 on success. returns ECGROUPNOTOWNER if the caller does not have access to the cgroup. returns ECGROUPNOTALLOWED for other causes of failure. </p>
+
+</div>
+</div>
+<a id="gabdb49127e5959831abb3a03e384c3dee" name="gabdb49127e5959831abb3a03e384c3dee"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#gabdb49127e5959831abb3a03e384c3dee">&#9670;&#160;</a></span>cgroup_attach_thread_tid()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int cgroup_attach_thread_tid </td>
+          <td>(</td>
+          <td class="paramtype">struct <a class="el" href="structcgroup.html">cgroup</a> *&#160;</td>
+          <td class="paramname"><em>cgroup</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">pid_t&#160;</td>
+          <td class="paramname"><em>tid</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Move given threads (=thread) to given control group. </p><dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">cgroup</td><td>Destination control group. </td></tr>
+    <tr><td class="paramname">tid</td><td>The task to move.</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>cgroup_attach_thread_tid is used to assign threads to a cgroup. struct cgroup *cgroup: The cgroup to assign the thread to. pid_t tid: The thread to be assigned to the cgroup.</p>
 <p>returns 0 on success. returns ECGROUPNOTOWNER if the caller does not have access to the cgroup. returns ECGROUPNOTALLOWED for other causes of failure. </p>
 
 </div>
