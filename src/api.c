@@ -554,6 +554,61 @@ STATIC int cgroup_parse_rules_options(char *options, struct cgroup_rule * const 
 
 	return ret;
 }
+
+static int get_next_rule_field(char *rule, char *field, bool expect_quotes)
+{
+	char *tmp, *_rule = rule;
+	char *quote_start = NULL;
+	int len = 0;
+
+	/* trim the leading space */
+	while (*rule == ' ')
+		rule++;
+
+	tmp = rule;
+
+	while (*rule != ' ' && *rule != '\n' && *rule != '\0') {
+		if (*rule == '"')
+			quote_start = rule;
+		rule++;
+	}
+
+	if (quote_start) {
+		if (!expect_quotes)
+			return 0;
+
+		while (*rule != '"' && *rule != '\n' && *rule != '\0')
+			rule++;
+
+		/* there should be a ending quote */
+		if (*rule != '"')
+			return 0;
+	}
+
+	if (quote_start) {
+		/* copy until the starting quotes */
+		len = quote_start - tmp;
+		strncpy(field, tmp, len);
+		field[len] = '\0';
+
+		/* copy until the ending quotes */
+		len = rule - quote_start - 1;
+		strncat(field, quote_start+1, len);
+	} else {
+		len = rule - tmp;
+		strncpy(field, tmp, len);
+		field[len] = '\0';
+	}
+
+	len = (rule - _rule);
+
+	/* count until the ending quotes */
+	if (quote_start)
+		len += 1;
+
+	return len;
+}
+
 /**
  * Parse the configuration file that maps UID/GIDs to cgroups.  If ever the
  * configuration file is modified, applications should call this function to
@@ -677,15 +732,33 @@ static int cgroup_parse_rules_file(char *filename, bool cache, uid_t muid, gid_t
 		 * there's an error in the configuration file.
 		 */
 		skipped = false;
-		i = sscanf(itr, "%s%s%s%s", key, controllers, destination, options);
-		if (i < 3) {
+
+		ret = get_next_rule_field(itr, key, true);
+		if (!ret) {
 			cgroup_err("failed to parse configuration file on line %d\n", linenum);
 			goto parsefail;
-		} else if (i == 3) {
-			has_options = false;
-		} else if (i == 4) {
-			has_options = true;
 		}
+
+		itr += ret;
+		ret = get_next_rule_field(itr, controllers, false);
+		if (!ret) {
+			cgroup_err("failed to parse configuration file on line %d\n", linenum);
+			goto parsefail;
+		}
+
+		itr += ret;
+		ret = get_next_rule_field(itr, destination, true);
+		if (!ret) {
+			cgroup_err("failed to parse configuration file on line %d\n", linenum);
+			goto parsefail;
+		}
+
+		itr += ret;
+		ret = get_next_rule_field(itr, options, false);
+		if (!ret)
+			has_options = false;
+		else
+			has_options = true;
 
 		procname = strchr(key, ':');
 		if (procname) {
