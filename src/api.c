@@ -555,47 +555,61 @@ STATIC int cgroup_parse_rules_options(char *options, struct cgroup_rule * const 
 	return ret;
 }
 
-static int get_next_rule_field(char *rule, char *field, bool expect_quotes)
+STATIC int get_next_rule_field(char *rule, char *field, size_t field_len, bool expect_quotes)
 {
+	char *quote_start = NULL, *quote_end = NULL;
 	char *tmp, *_rule = rule;
-	char *quote_start = NULL;
 	int len = 0;
 
-	/* trim the leading space */
-	while (*rule == ' ')
+	if (!rule || !field)
+		return ECGINVAL;
+
+	/* trim the leading whitespace */
+	while (*rule == ' ' || *rule == '\t')
 		rule++;
 
 	tmp = rule;
 
-	while (*rule != ' ' && *rule != '\n' && *rule != '\0') {
-		if (*rule == '"')
+	while (*rule != ' ' && *rule != '\t' && *rule != '\n' && *rule != '\0') {
+		if (*rule == '"') {
 			quote_start = rule;
+			rule++;
+			break;
+		}
 		rule++;
 	}
 
 	if (quote_start) {
 		if (!expect_quotes)
-			return 0;
+			/* TODO - should we error here? */
+			return ECGINVAL;
 
 		while (*rule != '"' && *rule != '\n' && *rule != '\0')
 			rule++;
 
 		/* there should be a ending quote */
 		if (*rule != '"')
-			return 0;
+			/* TODO - should we error here? */
+			return ECGINVAL;
+
+		quote_end = rule;
 	}
 
-	if (quote_start) {
-		/* copy until the starting quotes */
-		len = quote_start - tmp;
-		strncpy(field, tmp, len);
-		field[len] = '\0';
-
+	if (quote_end) {
 		/* copy until the ending quotes */
-		len = rule - quote_start - 1;
-		strncat(field, quote_start+1, len);
+		len = quote_end - quote_start - 1;
+
+		if (len >= field_len)
+			return ECGINVAL;
+
+		strncpy(field, quote_start + 1, len);
+		field[len] = '\0';
 	} else {
 		len = rule - tmp;
+
+		if (len >= field_len)
+			return ECGINVAL;
+
 		strncpy(field, tmp, len);
 		field[len] = '\0';
 	}
@@ -733,28 +747,28 @@ static int cgroup_parse_rules_file(char *filename, bool cache, uid_t muid, gid_t
 		 */
 		skipped = false;
 
-		ret = get_next_rule_field(itr, key, true);
+		ret = get_next_rule_field(itr, key, CGRP_RULE_MAXKEY, true);
 		if (!ret) {
 			cgroup_err("failed to parse configuration file on line %d\n", linenum);
 			goto parsefail;
 		}
 
 		itr += ret;
-		ret = get_next_rule_field(itr, controllers, false);
+		ret = get_next_rule_field(itr, controllers, CG_CONTROLLER_MAX, false);
 		if (!ret) {
 			cgroup_err("failed to parse configuration file on line %d\n", linenum);
 			goto parsefail;
 		}
 
 		itr += ret;
-		ret = get_next_rule_field(itr, destination, true);
+		ret = get_next_rule_field(itr, destination, FILENAME_MAX, true);
 		if (!ret) {
 			cgroup_err("failed to parse configuration file on line %d\n", linenum);
 			goto parsefail;
 		}
 
 		itr += ret;
-		ret = get_next_rule_field(itr, options, false);
+		ret = get_next_rule_field(itr, options, CG_OPTIONS_MAX, false);
 		if (!ret)
 			has_options = false;
 		else
