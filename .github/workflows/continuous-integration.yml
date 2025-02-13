@@ -115,7 +115,7 @@ jobs:
     - name: Collate code coverage results
       uses: ./.github/actions/code-coverage
     - name: Upload code coverage results
-      uses: coverallsapp/github-action@master
+      uses: coverallsapp/github-action@v2
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./lcov.total
@@ -254,7 +254,7 @@ jobs:
     - name: Collate code coverage results
       uses: ./.github/actions/code-coverage
     - name: Upload code coverage results
-      uses: coverallsapp/github-action@master
+      uses: coverallsapp/github-action@v2
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./lcov.total
@@ -301,7 +301,7 @@ jobs:
     - name: Collate code coverage results
       uses: ./.github/actions/code-coverage
     - name: Upload code coverage results
-      uses: coverallsapp/github-action@master
+      uses: coverallsapp/github-action@v2
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./lcov.total
@@ -359,7 +359,7 @@ jobs:
     - name: Collate code coverage results
       uses: ./.github/actions/code-coverage
     - name: Upload code coverage results
-      uses: coverallsapp/github-action@master
+      uses: coverallsapp/github-action@v2
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./lcov.total
@@ -404,7 +404,7 @@ jobs:
     - name: Collate code coverage results
       uses: ./.github/actions/code-coverage
     - name: Upload code coverage results
-      uses: coverallsapp/github-action@master
+      uses: coverallsapp/github-action@v2
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: ./lcov.total
@@ -425,7 +425,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Finalize code coverage results
-      uses: coverallsapp/github-action@master
+      uses: coverallsapp/github-action@v2
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         parallel-finished: True
