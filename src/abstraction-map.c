@@ -41,6 +41,12 @@ const struct cgroup_abstraction_map cgroup_v1_to_v2_map[] = {
 	{cgroup_convert_unmappable, "cpuset.memory_spread_slab", NULL, NULL, NULL},
 	{cgroup_convert_unmappable, "cpuset.sched_load_balance", NULL, NULL, NULL},
 	{cgroup_convert_unmappable, "cpuset.sched_relax_domain_level", NULL, NULL, NULL},
+
+	/* memory controller */
+	{cgroup_convert_memory_max_limit_to_max, "memory.limit_in_bytes",
+		(void *)"9223372036854771712", "memory.max", (void *)"max"},
+	{cgroup_convert_memory_high_limit_to_max, "memory.soft_limit_in_bytes",
+		(void *)"9223372036854771712", "memory.high", (void *)"max"},
 };
 const int cgroup_v1_to_v2_map_sz = ARRAY_SIZE(cgroup_v1_to_v2_map);
 
@@ -58,5 +64,11 @@ const struct cgroup_abstraction_map cgroup_v2_to_v1_map[] = {
 	{cgroup_convert_passthrough, "cpuset.mems", NULL, "cpuset.mems", NULL},
 	{cgroup_convert_cpuset_to_exclusive, "cpuset.cpus.partition", NULL,
 		"cpuset.cpu_exclusive", NULL},
+
+	/* memory controller */
+	{cgroup_convert_memory_max_max_to_limit, "memory.max", (void *)"max",
+		"memory.limit_in_bytes", (void *)"9223372036854771712"},
+	{cgroup_convert_memory_high_max_to_limit, "memory.high", (void *)"max",
+		"memory.soft_limit_in_bytes", (void *)"9223372036854771712"},
 };
 const int cgroup_v2_to_v1_map_sz = ARRAY_SIZE(cgroup_v2_to_v1_map);

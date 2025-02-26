@@ -112,6 +112,23 @@ int cgroup_convert_cpuset_to_partition(struct cgroup_controller * const dst_cgc,
 				       const char * const in_value, const char * const out_setting,
 				       void *in_dflt, void *out_dflt);
 
+/* memory */
+int cgroup_convert_memory_max_limit_to_max(struct cgroup_controller * const dst_cgc,
+				const char * const in_value, const char * const out_setting,
+				void *in_dflt, void *out_dflt);
+
+int cgroup_convert_memory_high_limit_to_max(struct cgroup_controller * const dst_cgc,
+				const char * const in_value, const char * const out_setting,
+				void *in_dflt, void *out_dflt);
+
+int cgroup_convert_memory_max_max_to_limit(struct cgroup_controller * const dst_cgc,
+				const char * const in_value, const char * const out_setting,
+				void *in_dflt, void *out_dflt);
+
+int cgroup_convert_memory_high_max_to_limit(struct cgroup_controller * const dst_cgc,
+				const char * const in_value, const char * const out_setting,
+				void *in_dflt, void *out_dflt);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
