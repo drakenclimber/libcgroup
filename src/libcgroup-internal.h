@@ -195,6 +195,14 @@ struct cgroup_dictionary_item {
 	struct cgroup_dictionary_item *next;
 };
 
+#ifdef WITH_SYSTEMD
+struct systemd_property_and_type {
+	const char *name;
+	int type;
+	int array_type;
+};
+#endif /* WITH_SYSTEMD */
+
 /* Flags for cgroup_dictionary_create */
 /**
  * All items (i.e. both name and value strings) stored in the dictionary
@@ -261,7 +269,11 @@ extern __thread char *cg_namespace_table[CG_CONTROLLER_MAX];
  * Default systemd cgroup used by the cg_build_path_locked() and tools
  * setting the default cgroup path.
  */
+#ifdef WITH_SYSTEMD
 extern char systemd_default_cgroup[FILENAME_MAX * 2 + 1];
+extern const struct systemd_property_and_type systemd_property_table[];
+extern const int systemd_property_table_sz;
+#endif /* WITH_SYSTEMD */
 
 /*
  * config related API
