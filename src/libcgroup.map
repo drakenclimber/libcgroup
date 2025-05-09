@@ -170,3 +170,10 @@ CGROUP_3.2 {
 	cgroup_get_threads;
 	cgroup_get_loglevel;
 } CGROUP_3.0;
+
+CGROUP_3.3 {
+	cgroup_set_property;
+	systemd_property_table;
+	systemd_property_table_sz;
+	cgroup_systemd_cpuset_str_to_byte_array;
+} CGROUP_3.2;

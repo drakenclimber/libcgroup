@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: LGPL-2.1-only */
 /**
- * Copyright (c) 2022 Oracle and/or its affiliates.
+ * Copyright (c) 2022-2025 Oracle and/or its affiliates.
  * Author: Tom Hromatka <tom.hromatka@oracle.com>
  * Author: Silvia Chapa <silvia.chapa@oracle.com>
  */
 
-#include <libcgroup-internal.h>
+#include "libcgroup-internal.h"
 
 #ifdef WITH_SYSTEMD
 #include <systemd/sd-bus.h>
@@ -54,6 +54,46 @@ static const char * const controller_name[] = {
 static const char * const sender = "org.freedesktop.systemd1";
 static const char * const path = "/org/freedesktop/systemd1";
 static const char * const interface = "org.freedesktop.systemd1.Manager";
+
+const struct systemd_property_and_type systemd_property_table[] = {
+	{ "AllowedCPUs", SD_BUS_TYPE_ARRAY, SD_BUS_TYPE_BYTE },
+	{ "CPUAccounting", SD_BUS_TYPE_BOOLEAN, _SD_BUS_TYPE_INVALID },
+	{ "CPUQuotaPeriodUSec", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "CPUQuotaPerSecUSec", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "CPUWeight", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "DefaultMemoryLow", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "DefaultMemoryLowScale", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "DefaultMemoryMin", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "DefaultMemoryMinScale", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "DefaultStartupMemoryLow", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "IOAccounting", SD_BUS_TYPE_BOOLEAN, _SD_BUS_TYPE_INVALID },
+	{ "IOWeight", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryAccounting", SD_BUS_TYPE_BOOLEAN, _SD_BUS_TYPE_INVALID },
+	{ "MemoryHigh", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryHighScale", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryLow", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryLowScale", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryMax", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryMaxScale", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryMin", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryMinScale", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemorySwapMax", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemorySwapMaxScale", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryZSwapMax", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryZSwapMaxScale", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "MemoryZSwapWriteback", SD_BUS_TYPE_BOOLEAN, _SD_BUS_TYPE_INVALID },
+	{ "StartupAllowedCPUs", SD_BUS_TYPE_ARRAY, SD_BUS_TYPE_BYTE },
+	{ "StartupIOWeight", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "StartupMemoryLow", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "StartupMemoryHigh", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "StartupMemoryMax", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "StartupMemorySwapMax", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "StartupMemoryZSwapMax", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "TasksAccounting", SD_BUS_TYPE_BOOLEAN, _SD_BUS_TYPE_INVALID },
+	{ "TasksMax", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+	{ "TasksMaxScale", SD_BUS_TYPE_UINT64, _SD_BUS_TYPE_INVALID },
+};
+const int systemd_property_table_sz = ARRAY_SIZE(systemd_property_table);
 
 int cgroup_set_default_scope_opts(struct cgroup_systemd_scope_opts * const opts)
 {
@@ -429,6 +469,241 @@ bool cgroup_is_systemd_enabled(void)
 {
 	return true;
 }
+
+static int append_byte_array(sd_bus_message * const msg, const char * const setting,
+			     const struct cgroup_systemd_value * const value)
+{
+	int sdret;
+
+	sdret = sd_bus_message_open_container(msg, SD_BUS_TYPE_STRUCT, "sv");
+	if (sdret < 0) {
+		cgroup_err("failed to open sv container: %d\n", errno);
+		goto out;
+	}
+
+	sdret = sd_bus_message_append(msg, "s", setting);
+	if (sdret < 0) {
+		cgroup_err("failed to append the setting, %s: %d\n", setting, errno);
+		goto out;
+	}
+
+	sdret = sd_bus_message_open_container(msg, 'v', "ay");
+	if (sdret < 0) {
+		cgroup_err("failed to open byte array container: %d\n", errno);
+		goto out;
+	}
+
+	sdret = sd_bus_message_append_array(msg, 'y', value->byte_array, value->array_len);
+	if (sdret < 0) {
+		cgroup_err("failed to append byte array: %d\n", errno);
+		goto out;
+	}
+
+	sdret = sd_bus_message_close_container(msg);
+	if (sdret < 0) {
+		cgroup_err("failed to close the byte array container: %d\n", errno);
+		goto out;
+	}
+
+	sdret = sd_bus_message_close_container(msg);
+	if (sdret < 0) {
+		cgroup_err("failed to close the sv container: %d\n", errno);
+		goto out;
+	}
+
+out:
+	return sdret;
+}
+
+int cgroup_set_property(const char * const cgrp, const char * const setting,
+			const struct cgroup_systemd_value * const value,
+			const struct cgroup_systemd_property_opts * const opts)
+{
+	sd_bus_message *msg = NULL, *reply = NULL;
+	sd_bus_error error = SD_BUS_ERROR_NULL;
+	int sdret = 0, cgret = ECGFAIL;
+	sd_bus *bus = NULL;
+	char t[2];
+
+	if (!cgrp || !setting || !value || !opts)
+		return ECGINVAL;
+
+	sdret = sd_bus_default_system(&bus);
+	if (sdret < 0) {
+		cgroup_err("failed to open the system bus: %d\n", errno);
+		goto out;
+	}
+
+	sdret = sd_bus_message_new_method_call(bus, &msg, sender, path, interface,
+					       "SetUnitProperties");
+	if (sdret < 0) {
+		cgroup_err("failed to create the systemd msg: %d\n", errno);
+		goto out;
+	}
+
+	sdret = sd_bus_message_append(msg, "s", cgrp);
+	if (sdret < 0) {
+		cgroup_err("failed to append the cgroup name: %d\n", errno);
+		goto out;
+	}
+
+	sdret = sd_bus_message_append(msg, "b", opts->runtime);
+	if (sdret < 0) {
+		cgroup_err("failed to append the runtime value: %d\n", errno);
+		goto out;
+	}
+
+	sdret = sd_bus_message_open_container(msg, 'a', "(sv)");
+	if (sdret < 0) {
+		cgroup_err("failed to open container: %d\n", errno);
+		goto out;
+	}
+
+	t[0] = value->type;
+	t[1] = '\0';
+
+	switch (value->type) {
+	case SD_BUS_TYPE_BYTE:
+		sdret = sd_bus_message_append(msg, "(sv)", setting, t, value->byte_value);
+		break;
+	case SD_BUS_TYPE_ARRAY:
+		switch (value->array_type) {
+			case SD_BUS_TYPE_BYTE:
+				sdret = append_byte_array(msg, setting, value);
+				break;
+			default:
+				cgroup_err("unsupported d-bus array type: %d\n",
+					   value->array_type);
+				break;
+		}
+		break;
+	case SD_BUS_TYPE_BOOLEAN:
+		sdret = sd_bus_message_append(msg, "(sv)", setting, t, value->bool_value);
+		break;
+	case SD_BUS_TYPE_STRING:
+		sdret = sd_bus_message_append(msg, "(sv)", setting, t, value->str_value);
+		break;
+	case SD_BUS_TYPE_INT32:
+		sdret = sd_bus_message_append(msg, "(sv)", setting, t, value->int_value);
+		break;
+	case SD_BUS_TYPE_UINT32:
+		sdret = sd_bus_message_append(msg, "(sv)", setting, t, value->uint_value);
+		break;
+	case SD_BUS_TYPE_INT64:
+		sdret = sd_bus_message_append(msg, "(sv)", setting, t, value->ll_value);
+		break;
+	case SD_BUS_TYPE_UINT64:
+		sdret = sd_bus_message_append(msg, "(sv)", setting, t, value->ull_value);
+		break;
+	case _SD_BUS_TYPE_INVALID:
+		cgroup_err("Invalid systemd type\n");
+		sdret = -1;
+		break;
+	}
+	if (sdret < 0) {
+		cgroup_err("failed to append the description: %d\n", errno);
+		goto out;
+	}
+
+	sdret = sd_bus_message_close_container(msg);
+	if (sdret < 0) {
+		cgroup_err("failed to close the container: %d\n", errno);
+		goto out;
+	}
+
+	sdret = sd_bus_call(bus, msg, 0, &error, &reply);
+	if (sdret < 0) {
+		cgroup_err("sd_bus_call() failed: %d\n",
+			   sd_bus_message_get_errno(msg));
+		cgroup_err("error message: %s\n", error.message);
+		goto out;
+	}
+
+	cgret = 0;
+
+out:
+	sd_bus_error_free(&error);
+	sd_bus_message_unref(msg);
+	sd_bus_message_unref(reply);
+	sd_bus_unref(bus);
+
+	return cgret;
+}
+
+static int insert_cpu_into_byte_array(unsigned int cpu, unsigned char **array,
+				      int * const array_len)
+{
+	unsigned int byte_num;
+	void *tmp;
+	int i;
+
+	byte_num = cpu / 8;
+
+	if (byte_num >= (*array_len)) {
+		tmp = realloc((*array), sizeof(unsigned char) * (byte_num + 1));
+		if (tmp == NULL)
+			return ECGOTHER;
+
+		*array = tmp;
+
+		for (i = (*array_len); i < byte_num + 1; i++) {
+			/* zero out the newly added memory */
+			(*array)[i] = 0;
+		}
+
+		*array_len = byte_num + 1;
+	}
+
+	(*array)[byte_num] |= 1u << (cpu % 8);
+
+	return 0;
+}
+
+int cgroup_systemd_cpuset_str_to_byte_array(char * const in_str, unsigned char **byte_array,
+					    int * const array_len)
+{
+	char *comma_saveptr = NULL, *hyphen_saveptr = NULL;
+	char *comma_token = NULL, *hyphen_token = NULL;
+	unsigned char *tmp_array;
+	unsigned int cpu;
+	int start, end;
+	int ret, i;
+
+	if (!in_str || !byte_array || !array_len)
+		return ECGINVAL;
+
+	*array_len = 0;
+	tmp_array = NULL;
+
+	comma_token = strtok_r(in_str, ",", &comma_saveptr);
+
+	do {
+		if (strstr(comma_token, "-") != NULL) {
+			hyphen_token = strtok_r(comma_token, "-", &hyphen_saveptr);
+			start = atoi(hyphen_token);
+
+			hyphen_token = strtok_r(NULL, "-", &hyphen_saveptr);
+			end = atoi(hyphen_token);
+
+			for (i = start; i <= end; i++) {
+				ret = insert_cpu_into_byte_array(i, &tmp_array, array_len);
+				if (ret)
+					return ret;
+			}
+		} else {
+			/* a single cpu was provided */
+			cpu = atoi(comma_token);
+
+			ret = insert_cpu_into_byte_array(cpu, &tmp_array, array_len);
+			if (ret)
+				return ret;
+		}
+	} while ((comma_token = strtok_r(NULL, ",", &comma_saveptr)));
+
+	*byte_array = tmp_array;
+
+	return 0;
+}
 #else
 int cgroup_set_default_scope_opts(struct cgroup_systemd_scope_opts * const opts)
 {
@@ -453,5 +728,19 @@ int cgroup_create_scope2(struct cgroup *cgroup, int ignore_ownership,
 bool cgroup_is_systemd_enabled(void)
 {
 	return false;
+}
+
+int cgroup_set_property(const char * const cgrp, const char * const setting,
+			const struct cgroup_systemd_value * const value,
+			const struct cgroup_systemd_property_opts * const opts)
+{
+	cgroup_err("Systemd support not compiled\n");
+	return 1;
+}
+
+int cgroup_systemd_cpuset_str_to_byte_array(char * const in_str, unsigned char **byte_array,
+					    int * const array_len)
+{
+	return ECGROUPUNSUPP;
 }
 #endif

@@ -4,6 +4,10 @@
 #include <libcgroup.h>
 #include <libcgroup-internal.h>
 
+#ifdef WITH_SYSTEMD
+#include <systemd/sd-bus.h>
+#endif /* WITH_SYSTEMD */
+
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -23,6 +27,9 @@ static const struct option long_options[] = {
 	{"rule",	required_argument, NULL, 'r'},
 	{"help",	      no_argument, NULL, 'h'},
 	{"copy-from",	required_argument, NULL, COPY_FROM_OPTION},
+#ifdef WITH_SYSTEMD
+	{"property",	      no_argument, NULL, 'p'},
+#endif /* WITH_SYSTEMD */
 	{NULL, 0, NULL, 0}
 };
 
@@ -345,6 +352,90 @@ err:
 	return ret;
 }
 
+static int set_systemd_properties(const char *name,
+				  struct control_value *name_value, int nv_number)
+{
+	struct cgroup_systemd_value value = { 0 };
+	struct cgroup_systemd_property_opts opts;
+	int ret = ECGFAIL, i, j;
+	char *endptr;
+
+	if (!name)
+		return ECGINVAL;
+
+	opts.runtime = 1;
+
+	for (i = 0; i < nv_number; i++) {
+		value.type = _SD_BUS_TYPE_INVALID;
+
+		for (j = 0; j < systemd_property_table_sz; j++) {
+			if (strcmp(systemd_property_table[j].name, name_value[i].name) == 0) {
+				value.type = systemd_property_table[j].type;
+				value.array_type = systemd_property_table[j].array_type;
+				break;
+			}
+		}
+
+		if (value.type == _SD_BUS_TYPE_INVALID) {
+			err("Unsupported systemd property: %s\n", name_value[i].name);
+			ret = ECGINVAL;
+			goto out;
+		}
+
+		switch (value.type) {
+		case SD_BUS_TYPE_ARRAY:
+			if (strcmp(name_value[i].name, "AllowedCPUs") == 0 ||
+			    strcmp(name_value[i].name, "StartupAllowedCPUs") == 0) {
+				ret = cgroup_systemd_cpuset_str_to_byte_array(name_value[i].value,
+									      &value.byte_array,
+									      &value.array_len);
+				if (ret)
+					goto out;
+			} else {
+				cgroup_err("Unsupported array type: %d\n", value.array_type);
+				ret = ECGROUPUNSUPP;
+				break;
+			}
+			break;
+		case SD_BUS_TYPE_UINT64:
+			errno = 0;
+			value.ull_value = strtoull(name_value[i].value, &endptr, 10);
+			if (errno != 0) {
+				err("Failed to convert %s: %d\n", name_value[i].name, errno);
+				ret = ECGFAIL;
+				goto out;
+			}
+			if (endptr[0] != '\0' && endptr[0] != '\n') {
+				/* There was unparsable data in the string */
+		                ret = ECGFAIL;
+				goto out;
+			}
+			if (endptr == name_value[i].value) {
+				/* There was unparsable data in the string */
+				ret = ECGFAIL;
+				goto out;
+			}
+			if (value.ull_value == LLONG_MIN || value.ull_value == LLONG_MAX) {
+				ret = ECGFAIL;
+				goto out;
+			}
+			break;
+		}
+
+		ret = cgroup_set_property(name, name_value[i].name, &value, &opts);
+		if (ret) {
+			err("%s: cgroup set property error: %s\n", program_name, cgroup_strerror(ret));
+			break;
+		}
+	}
+
+out:
+	if (value.type == SD_BUS_TYPE_ARRAY && value.array_type == SD_BUS_TYPE_BYTE)
+		free(value.byte_array);
+
+	return ret;
+}
+
 static void usage(int status)
 {
 	if (status != 0) {
@@ -365,6 +456,10 @@ static void usage(int status)
 #endif
 	info("  -R					Recursively set variable(s)");
 	info(" for cgroups under <cgroup_path>\n");
+#ifdef WITH_SYSTEMD
+	info("  -p, --property                          Set a property on a ");
+	info("systemd-managed cgroup\n");
+#endif /* WITH_SYSTEMD */
 }
 #endif /* !UNIT_TEST */
 
@@ -448,6 +543,7 @@ int main(int argc, char *argv[])
 	int ignore_default_systemd_delegate_slice = 0;
 #endif
 	struct control_value *name_value = NULL;
+	int systemd_properties = 0;
 	int nv_number = 0;
 	int recursive = 0;
 	int nv_max = 0;
@@ -477,7 +573,7 @@ int main(int argc, char *argv[])
 
 	/* parse arguments */
 #ifdef WITH_SYSTEMD
-	while ((c = getopt_long (argc, argv, "r:hbR", long_options, NULL)) != -1) {
+	while ((c = getopt_long (argc, argv, "r:hbRp", long_options, NULL)) != -1) {
 		switch (c) {
 		case 'b':
 			ignore_default_systemd_delegate_slice = 1;
@@ -538,6 +634,11 @@ int main(int argc, char *argv[])
 		case 'R':
 			recursive = 1;
 			break;
+#ifdef WITH_SYSTEMD
+		case 'p':
+			systemd_properties = 1;
+			break;
+#endif /* WITH_SYSTEMD */
 		default:
 			usage(1);
 			ret = EXIT_BADARGS;
@@ -558,6 +659,21 @@ int main(int argc, char *argv[])
 		goto err;
 	}
 
+#ifdef WITH_SYSTEMD
+	if (systemd_properties && recursive) {
+		err("%s: recursive systemd properties currently aren't supported\n",
+		    program_name);
+		ret = EXIT_BADARGS;
+		goto err;
+	}
+	if (systemd_properties && (flags & FL_COPY)) {
+		err("%s: systemd properties currently cannot be copied from another cgroup\n",
+		    program_name);
+		ret = EXIT_BADARGS;
+		goto err;
+	}
+#endif /* WITH_SYSTEMD */
+
 	/* initialize libcgroup */
 	ret = cgroup_init();
 	if (ret) {
@@ -572,7 +688,7 @@ int main(int argc, char *argv[])
 #endif
 
 	/* copy the name-value pairs from -r options */
-	if ((flags & FL_RULES) != 0) {
+	if ((flags & FL_RULES) != 0 && !systemd_properties) {
 		src_cgroup = create_cgroup_from_name_value_pairs("tmp", name_value, nv_number);
 		if (src_cgroup == NULL)
 			goto err;
@@ -595,6 +711,10 @@ int main(int argc, char *argv[])
 	while (optind < argc) {
 		if (recursive) {
 			ret = cgroup_set_cgroup_values_r(src_cgroup, argv[optind]);
+#ifdef WITH_SYSTEMD
+		} else if (systemd_properties) {
+			ret = set_systemd_properties(argv[optind], name_value, nv_number);
+#endif /* WITH SYSTEMD */
 		} else {
 			ret = cgroup_set_cgroup_values(subtree_cgrp, argv[optind]);
 			if (ret)

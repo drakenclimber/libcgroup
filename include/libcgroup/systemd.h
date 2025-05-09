@@ -33,6 +33,13 @@ struct cgroup_systemd_scope_opts {
 	pid_t pid;
 };
 
+/**
+ * Options associated with getting/setting a property
+ */
+struct cgroup_systemd_property_opts {
+	bool runtime;
+};
+
 /*
  * cgroup systemd settings
  */
@@ -42,6 +49,26 @@ struct cgroup_systemd_opts {
 	int	setdefault;
 	pid_t	pid;
 	struct cgroup_systemd_opts *next;
+};
+
+struct cgroup_systemd_value {
+	int type;
+
+	/* the following two fields are only used for array types */
+	int array_len;
+	int array_type;
+
+	union {
+		unsigned char *byte_array;
+		unsigned char byte_value;
+		bool bool_value;
+		char *str_value;
+		int int_value;
+		unsigned int uint_value;
+		long long ll_value;
+		long long ull_value;
+		double double_value;
+	};
 };
 
 /**
@@ -137,6 +164,22 @@ int cgroup_write_systemd_default_cgroup(const char * const slice,
  * Return true if systemd support is compiled into the libcgroup library
  */
 bool cgroup_is_systemd_enabled(void);
+
+/**
+ * Set a cgroup property/value on the specified cgroup
+ *
+ * @param cgrp Name of the cgroup
+ * @param setting Setting to be modified.  (Must use systemd's setting names)
+ * @param value Value to set
+ * @param opts Property setting/getting options structure
+ */
+int cgroup_set_property(const char * const cgrp, const char * const setting,
+			const struct cgroup_systemd_value * const value,
+			const struct cgroup_systemd_property_opts * const opts);
+
+/* TODO - add doxygen comment */
+int cgroup_systemd_cpuset_str_to_byte_array(char * const in_str, unsigned char **byte_array,
+					    int * const array_len);
 
 #ifdef __cplusplus
 } /* extern "C" */
