@@ -178,6 +178,19 @@ int cgroup_set_property(const char * const cgrp, const char * const setting,
 			const struct cgroup_systemd_value * const value,
 			const struct cgroup_systemd_property_opts * const opts);
 
+/**
+ * Convert a human-readable string of cpus to a cpuset byte array
+ *
+ * @param in_str List of cpus, e.g. 1-3,6,8-13
+ * @param byte_array Array of bytes where each bit represents a cpu
+ * @param array_len Length of the byte_array
+ *
+ * Note that this function allocates memory for the byte_array and it is the
+ * responsibility of the caller to free the memory.
+ */
+int cgroup_systemd_cpuset_str_to_byte_array(char * const in_str, unsigned char **byte_array,
+					    int * const array_len);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
