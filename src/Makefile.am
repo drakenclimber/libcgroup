@@ -58,4 +58,5 @@ libcgroupfortesting_la_LDFLAGS = -Wl,--version-script,$(TESTING_MAP_FILE) \
 				 -version-number $(VERSION_NUMBER)
 if WITH_SYSTEMD
 libcgroupfortesting_la_LDFLAGS += -lsystemd
+libcgroupfortesting_la_CFLAGS += -DWITH_SYSTEMD
 endif

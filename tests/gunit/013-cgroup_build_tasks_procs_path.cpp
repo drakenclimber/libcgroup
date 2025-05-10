@@ -99,7 +99,7 @@ TEST_F(BuildTasksProcPathTest, BuildTasksProcPathTest_CgV1)
 	ret = cgroup_build_tasks_procs_path(path, sizeof(path), cgrp_name,
 					    ctrlname);
 	ASSERT_EQ(ret, 0);
-	ASSERT_STREQ(path, "/sys/fs/cgroup/controller2/Container7/tasks");
+	ASSERT_STREQ(path, "/sys/fs/cgroup/controller2//Container7/tasks");
 }
 
 TEST_F(BuildTasksProcPathTest, BuildTasksProcPathTest_CgV2)
@@ -112,7 +112,7 @@ TEST_F(BuildTasksProcPathTest, BuildTasksProcPathTest_CgV2)
 	ret = cgroup_build_tasks_procs_path(path, sizeof(path), cgrp_name,
 					    ctrlname);
 	ASSERT_EQ(ret, 0);
-	ASSERT_STREQ(path, "/sys/fs/cgroup/controller3/tomcat/cgroup.procs");
+	ASSERT_STREQ(path, "/sys/fs/cgroup/controller3//tomcat/cgroup.procs");
 }
 
 TEST_F(BuildTasksProcPathTest, BuildTasksProcPathTest_CgV1WithNs)
@@ -125,7 +125,7 @@ TEST_F(BuildTasksProcPathTest, BuildTasksProcPathTest_CgV1WithNs)
 	ret = cgroup_build_tasks_procs_path(path, sizeof(path), cgrp_name,
 					    ctrlname);
 	ASSERT_EQ(ret, 0);
-	ASSERT_STREQ(path, "/sys/fs/cgroup/controller4/ns4/database12/tasks");
+	ASSERT_STREQ(path, "/sys/fs/cgroup/controller4//ns4/database12/tasks");
 }
 
 TEST_F(BuildTasksProcPathTest, BuildTasksProcPathTest_CgV2WithNs)
@@ -138,5 +138,5 @@ TEST_F(BuildTasksProcPathTest, BuildTasksProcPathTest_CgV2WithNs)
 	ret = cgroup_build_tasks_procs_path(path, sizeof(path), cgrp_name,
 					    ctrlname);
 	ASSERT_EQ(ret, 0);
-	ASSERT_STREQ(path, "/sys/fs/cgroup/controller1/ns1/server/cgroup.procs");
+	ASSERT_STREQ(path, "/sys/fs/cgroup/controller1//ns1/server/cgroup.procs");
 }
