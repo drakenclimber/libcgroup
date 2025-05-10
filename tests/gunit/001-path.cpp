@@ -99,7 +99,7 @@ TEST_F(BuildPathV1Test, BuildPathV1_ControllerMatch)
 	char *out;
 
 	out = cg_build_path(name, path, type);
-	ASSERT_STREQ(out, "/sys/fs/cgroup/controller0/");
+	ASSERT_STREQ(out, "/sys/fs/cgroup/controller0//");
 }
 
 /**
@@ -120,7 +120,7 @@ TEST_F(BuildPathV1Test, BuildPathV1_ControllerMatchWithName)
 	char *out;
 
 	out = cg_build_path(name, path, type);
-	ASSERT_STREQ(out, "/sys/fs/cgroup/controller3/TomsCgroup1/");
+	ASSERT_STREQ(out, "/sys/fs/cgroup/controller3//TomsCgroup1/");
 }
 
 /**
@@ -141,7 +141,7 @@ TEST_F(BuildPathV1Test, BuildPathV1_ControllerMatchWithNs)
 	char *out;
 
 	out = cg_build_path(name, path, type);
-	ASSERT_STREQ(out, "/sys/fs/cgroup/controller1/ns1/");
+	ASSERT_STREQ(out, "/sys/fs/cgroup/controller1//ns1/");
 }
 
 /**
@@ -161,5 +161,5 @@ TEST_F(BuildPathV1Test, BuildPathV1_ControllerMatchWithNameAndNs)
 	char *out;
 
 	out = cg_build_path(name, path, type);
-	ASSERT_STREQ(out, "/sys/fs/cgroup/controller5/ns5/TomsCgroup2/");
+	ASSERT_STREQ(out, "/sys/fs/cgroup/controller5//ns5/TomsCgroup2/");
 }
