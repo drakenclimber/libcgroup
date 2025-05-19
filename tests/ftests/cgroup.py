@@ -2,7 +2,7 @@
 #
 # Cgroup class for the libcgroup functional tests
 #
-# Copyright (c) 2019-2022 Oracle and/or its affiliates.
+# Copyright (c) 2019-2026 Oracle and/or its affiliates.
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
@@ -252,7 +252,8 @@ class Cgroup(object):
 
     @staticmethod
     def __set(config, cmd, cgname=None, setting=None, value=None,
-              copy_from=None, cghelp=False, ignore_systemd=False, recursive=False):
+              copy_from=None, cghelp=False, ignore_systemd=False, recursive=False,
+              systemd_property=False):
         if setting is not None or value is not None:
             if isinstance(setting, str) and (isinstance(value, str) or isinstance(value, int)):
                 cmd.append('-r')
@@ -295,6 +296,9 @@ class Cgroup(object):
         if recursive:
             cmd.append('-R')
 
+        if systemd_property:
+            cmd.append('-p')
+
         if config.args.container:
             return config.container.run(cmd)
         else:
@@ -302,7 +306,8 @@ class Cgroup(object):
 
     @staticmethod
     def set(config, cgname=None, setting=None, value=None, copy_from=None,
-            cghelp=False, ignore_systemd=False, recursive=False):
+            cghelp=False, ignore_systemd=False, recursive=False,
+            systemd_property=False):
         """cgset equivalent method
 
         The following variants of cgset are being tested by the
@@ -324,12 +329,13 @@ class Cgroup(object):
         cmd.append(Cgroup.build_cmd_path('cgset'))
 
         return Cgroup.__set(config, cmd, cgname, setting, value, copy_from,
-                            cghelp, ignore_systemd, recursive)
+                            cghelp, ignore_systemd, recursive, systemd_property)
 
     @staticmethod
     def xset(config, cgname=None, setting=None, value=None, copy_from=None,
              version=CgroupVersion.CGROUP_UNK, cghelp=False,
-             ignore_unmappable=False, ignore_systemd=False, recursive=False):
+             ignore_unmappable=False, ignore_systemd=False, recursive=False,
+             systemd_property=False):
         """cgxset equivalent method
         """
         cmd = list()
@@ -346,7 +352,7 @@ class Cgroup(object):
             cmd.append('-i')
 
         return Cgroup.__set(config, cmd, cgname, setting, value, copy_from,
-                            cghelp, ignore_systemd, recursive)
+                            cghelp, ignore_systemd, recursive, systemd_property)
 
     @staticmethod
     def __get(config, cmd, controller=None, cgname=None, setting=None,
