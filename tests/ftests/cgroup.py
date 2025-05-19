@@ -252,7 +252,8 @@ class Cgroup(object):
 
     @staticmethod
     def __set(config, cmd, cgname=None, setting=None, value=None,
-              copy_from=None, cghelp=False, ignore_systemd=False, recursive=False):
+              copy_from=None, cghelp=False, ignore_systemd=False, recursive=False,
+              systemd_property=False):
         if setting is not None or value is not None:
             if isinstance(setting, str) and (isinstance(value, str) or isinstance(value, int)):
                 cmd.append('-r')
@@ -294,6 +295,9 @@ class Cgroup(object):
 
         if recursive:
             cmd.append('-R')
+
+        if systemd_property:
+            cmd.append('-p')
 
         if config.args.container:
             return config.container.run(cmd)
