@@ -2,7 +2,7 @@
 #
 # Libcgroup Python Bindings
 #
-# Copyright (c) 2021-2022 Oracle and/or its affiliates.
+# Copyright (c) 2021-2025 Oracle and/or its affiliates.
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
@@ -47,6 +47,20 @@ cdef class LogLevel:
     CGROUP_LOG_INFO = cgroup.CGROUP_LOG_INFO
     CGROUP_LOG_DEBUG = cgroup.CGROUP_LOG_DEBUG
 
+ifdef(`WITH_SYSTEMD',
+# comment to appease m4
+cdef class BusType:
+    BUS_TYPE_INVALID = cgroup._SD_BUS_TYPE_INVALID
+    BUS_TYPE_BYTE = cgroup.SD_BUS_TYPE_BYTE
+    BUS_TYPE_BOOLEAN = cgroup.SD_BUS_TYPE_BOOLEAN
+    BUS_TYPE_INT32 = cgroup.SD_BUS_TYPE_INT32
+    BUS_TYPE_UINT32 = cgroup.SD_BUS_TYPE_UINT32
+    BUS_TYPE_INT64 = cgroup.SD_BUS_TYPE_INT64
+    BUS_TYPE_UINT64 = cgroup.SD_BUS_TYPE_UINT64
+    BUS_TYPE_DOUBLE = cgroup.SD_BUS_TYPE_DOUBLE
+    BUS_TYPE_STRING = cgroup.SD_BUS_TYPE_STRING
+    BUS_TYPE_ARRAY = cgroup.SD_BUS_TYPE_ARRAY
+)
 
 def c_str(string):
     return bytes(string, "ascii")
@@ -829,6 +843,84 @@ cdef class Cgroup:
         """
 
         return cgroup.cgroup_is_systemd_enabled()
+
+ifdef(`WITH_SYSTEMD',
+    # comment to appease m4
+    @staticmethod
+    def set_systemd_property(cgrp, setting, value, value_type, array_type=None):
+        """Set a cgroup setting on a systemd-managed cgroup
+
+        Note:
+        Writes to systemd via D-Bus``,'' the cgroup sysfs``,'' and likely /run
+        """
+        cdef cgroup.cgroup_systemd_property_opts opts
+        cdef unsigned char *byte_array = NULL
+        cdef cgroup.cgroup_systemd_value val
+
+        opts.runtime = 0
+
+        val.type = value_type
+
+        if value_type == cgroup.SD_BUS_TYPE_ARRAY and \
+           array_type == cgroup.SD_BUS_TYPE_BYTE:
+            byte_array = <unsigned char *>malloc(``len''(value) * sizeof(unsigned char))
+
+            for i in range(``len''(value)):
+                byte_array[i] = value[i]
+
+            val.byte_array = byte_array
+            val.array_type = cgroup.SD_BUS_TYPE_BYTE
+            val.array_len = ``len''(value)
+        elif value_type == cgroup.SD_BUS_TYPE_BYTE:
+            val.byte_value = value
+        elif value_type == cgroup.SD_BUS_TYPE_BOOLEAN:
+            val.bool_value = value
+        elif value_type == cgroup.SD_BUS_TYPE_INT32:
+            val.int_value = value
+        elif value_type == cgroup.SD_BUS_TYPE_UINT32:
+            val.uint_value = value
+        elif value_type == cgroup.SD_BUS_TYPE_INT64:
+            val.ll_value = value
+        elif value_type == cgroup.SD_BUS_TYPE_UINT64:
+            val.ull_value = value
+        elif value_type == cgroup.SD_BUS_TYPE_DOUBLE:
+            val.double_value = value
+        elif value_type == cgroup.SD_BUS_TYPE_STRING:
+            val.str_value = <char *>malloc(len(value))
+            strcpy(val.str_value, c_str(value))
+        else:
+            raise RuntimeError("Unsupported type: {}".``format''(value_type))
+
+        ret = cgroup.cgroup_set_property(c_str(cgrp), c_str(setting), &val, &opts)
+        if ret != 0:
+            raise RuntimeError("cgxset failed: {}".``format''(ret))
+
+        if value_type == cgroup.SD_BUS_TYPE_STRING:
+            free(val.str_value)
+
+        if byte_array:
+            free(byte_array)
+)
+
+    @staticmethod
+    def cpuset_str_to_bitfield(cpuset_str):
+        cdef unsigned char *array
+        cdef int array_len
+
+        ret = cgroup.cgroup_systemd_cpuset_str_to_byte_array(
+                        c_str(cpuset_str), &array, &array_len)
+        if ret != 0:
+            raise RuntimeError("failed to convert '{}' to a byte array: {}".
+                                `format'(cpuset_str, ret))
+
+        parray = bytearray(array_len)
+
+        for i in range(array_len):
+            parray[i] = array[i]
+
+        free(array)
+
+        return parray
 
     def __dealloc__(self):
         cgroup.cgroup_free(&self._cgp)

@@ -2,7 +2,7 @@
 #
 # Libcgroup Python Bindings
 #
-# Copyright (c) 2021-2022 Oracle and/or its affiliates.
+# Copyright (c) 2021-2025 Oracle and/or its affiliates.
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
@@ -42,10 +42,46 @@ cdef extern from "libcgroup.h":
         CGROUP_SYSTEMD_MODE_IGNORE_DEPS
         CGROUP_SYSTEMD_MODE_IGNORE_REQS
 
+ifdef(`WITH_SYSTEMD',
+    # comment to appease m4
+    cdef extern from "systemd/sd-bus-protocol.h":
+        ctypedef enum:
+            _SD_BUS_TYPE_INVALID = 0
+            SD_BUS_TYPE_BYTE = 121 # y
+            SD_BUS_TYPE_BOOLEAN = 98 # b
+            SD_BUS_TYPE_INT32 = 105 # i
+            SD_BUS_TYPE_UINT32 = 117 # u
+            SD_BUS_TYPE_INT64 = 120 # x
+            SD_BUS_TYPE_UINT64 = 116 # t
+            SD_BUS_TYPE_DOUBLE = 100 # d
+            SD_BUS_TYPE_STRING = 115 # s
+            SD_BUS_TYPE_ARRAY = 97 # a
+)
+
     cdef struct cgroup_systemd_scope_opts:
         int delegated
         cgroup_systemd_mode_t mode
         pid_t pid
+
+    cdef struct cgroup_systemd_property_opts:
+        bool runtime
+
+    cdef struct cgroup_systemd_value:
+        int type
+        int array_len
+        int array_type
+
+        # The anonymous union of values has been removed to simplify
+        # the cython syntax.  The correct struct is still created :)
+        unsigned char *byte_array
+        unsigned char byte_value
+        bool bool_value
+        char *str_value
+        int int_value
+        unsigned int uint_value
+        long long ll_value
+        unsigned long long ull_value
+        double double_value
 
     cdef enum cgroup_log_level:
         CGROUP_LOG_CONT
@@ -134,5 +170,12 @@ cdef extern from "libcgroup.h":
     bool cgroup_is_systemd_enabled()
 
     int cgroup_attach_thread_tid(cgroup * cgroup, pid_t tid)
+
+    int cgroup_set_property(const char * const cgrp, const char * const setting,
+                            const cgroup_systemd_value *value,
+                            const cgroup_systemd_property_opts * const opts)
+
+    int cgroup_systemd_cpuset_str_to_byte_array(char * const in_str, unsigned char **byte_array,
+                                                int * const array_len)
 
 # vim: set et ts=4 sw=4:
