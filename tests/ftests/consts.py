@@ -9,7 +9,6 @@
 import os
 
 DEFAULT_LOG_FILE = 'libcgroup-ftests.log'
-
 LOG_CRITICAL = 1
 LOG_WARNING = 5
 LOG_DEBUG = 8

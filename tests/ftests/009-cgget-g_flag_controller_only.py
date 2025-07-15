@@ -8,6 +8,7 @@
 #
 
 from cgroup import Cgroup, CgroupVersion
+import consts_distro
 import consts
 import ftests
 import utils
@@ -31,27 +32,23 @@ def test(config):
     result = consts.TEST_FAILED
     cause = None
 
-    out = Cgroup.get(config, controller=CONTROLLER, cgname=CGNAME)
+    out = Cgroup.get(config, controller=CONTROLLER, cgname=CGNAME, print_headers=False)
     version = CgroupVersion.get_version(CONTROLLER)
 
-    if version == CgroupVersion.CGROUP_V1:
-        EXPECTED_OUT = [OUT_PREFIX + expected_out for expected_out in consts.EXPECTED_CPU_OUT_V1]
-    else:
-        EXPECTED_OUT = [OUT_PREFIX + expected_out for expected_out in consts.EXPECTED_CPU_OUT_V2]
+    EXPECTED_OUT = consts_distro.consts.expected_cpu_out_009(CONTROLLER)
 
     for expected_out in EXPECTED_OUT:
         if len(out.splitlines()) == len(expected_out.splitlines()):
-            if len(out.splitlines()) == len(expected_out.splitlines()):
-                result_, tmp_cause = utils.is_output_same(config, out, expected_out)
-                if result_ is True:
-                    result = consts.TEST_PASSED
-                    cause = None
-                    break
-                else:
-                    if cause is None:
-                        cause = 'Tried Matching:\n==============='
+            result_, tmp_cause = utils.is_output_same(config, out, expected_out)
+            if result_ is True:
+                result = consts.TEST_PASSED
+                cause = None
+                break
+            else:
+                if cause is None:
+                    cause = 'Tried Matching:\n==============='
 
-                    cause = '\n'.join(filter(None, [cause, expected_out]))
+                cause = '\n'.join(filter(None, [cause, expected_out]))
 
     return result, cause
 
