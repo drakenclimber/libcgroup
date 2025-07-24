@@ -8,7 +8,7 @@
 #
 
 from cgroup import Cgroup as Cgroup, Mode
-from distro import ConstsCommon as consts
+from consts import Consts
 from process import Process
 from run import RunError
 import ftests
@@ -22,11 +22,11 @@ GRANDCHILDCG = os.path.join(CHILDCG, 'grandchildcg')
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if Cgroup.get_cgroup_mode(config) != Mode.CGROUP_MODE_UNIFIED:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the unified cgroup v2 hierarchy'
 
     return result, cause
@@ -70,7 +70,7 @@ def test(config):
         if 'No such file or directory' not in re.stderr:
             raise re
 
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def teardown(config):
@@ -83,7 +83,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

@@ -6,9 +6,9 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
 from container import Container
 from process import Process
+from consts import Consts
 import utils
 import os
 
@@ -34,8 +34,8 @@ class Config(object):
         self.ftest_dir = os.path.dirname(os.path.abspath(__file__))
         self.libcg_dir = os.path.dirname(self.ftest_dir)
 
-        self.test_suite = consts.TESTS_RUN_ALL_SUITES
-        self.test_num = consts.TESTS_RUN_ALL
+        self.test_suite = Consts.TESTS_RUN_ALL_SUITES
+        self.test_num = Consts.TESTS_RUN_ALL
         self.verbose = False
 
     def __str__(self):

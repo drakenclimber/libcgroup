@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from process import Process
 from systemd import Systemd
 from cgroup import Cgroup
@@ -25,15 +25,15 @@ OUT_OF_SCOPE_CGNAME2 = '088outofscope.scope'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
@@ -44,7 +44,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     #
@@ -61,7 +61,7 @@ def test(config):
 
     pid = Cgroup.get_pids_in_cgroup(config, CGNAME, CONTROLLER)
     if len(pid) > 1 and idle_pid == pid[0]:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Failed to replace scope idle_thread pid {}'.format(idle_pid)
         return result, cause
 
@@ -76,7 +76,7 @@ def test(config):
         if 'Failed to find idle_thread task' not in re.stderr:
             raise re
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Erroneously classified a task in scope cgroup {}\n'.format(CGNAME)
         return result, cause
 
@@ -85,7 +85,7 @@ def test(config):
 
     replace_pid = Cgroup.get_pids_in_cgroup(config, CGNAME, CONTROLLER)
     if replace_pid[0] != pid[0]:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = ('Erroneously replaced scope non idle_thread pid {} with '
                  'pid {}'.format(pid[0], replace_pid[0]))
         return result, cause
@@ -102,7 +102,7 @@ def test(config):
         if 'Failed to find idle_thread task' not in re.stderr:
             raise re
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = ('Erroneously classified a task in non scope '
                  'cgroup {}\n'.format(OUT_OF_SCOPE_CGNAME1))
         return result, cause
@@ -112,7 +112,7 @@ def test(config):
 
     pid = Cgroup.get_pids_in_cgroup(config, OUT_OF_SCOPE_CGNAME1, CONTROLLER)
     if len(pid) != 0:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = ('Erroneously classified a task in non scope '
                  'cgroup {}\n'.format(OUT_OF_SCOPE_CGNAME1))
         return result, cause
@@ -129,7 +129,7 @@ def test(config):
         if 'Failed to find idle_thread task' not in re.stderr:
             raise re
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = ('Erroneously classified a task in non scope '
                  'cgroup {}\n'.format(OUT_OF_SCOPE_CGNAME2))
         return result, cause
@@ -139,7 +139,7 @@ def test(config):
 
     pid = Cgroup.get_pids_in_cgroup(config, OUT_OF_SCOPE_CGNAME2, CONTROLLER)
     if len(pid) != 0:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = ('Erroneously classified a task in non scope '
                  'cgroup {}\n'.format(OUT_OF_SCOPE_CGNAME2))
 
@@ -170,7 +170,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

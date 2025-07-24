@@ -6,12 +6,13 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from cgroup_version import CgroupVersion
 from container import ContainerError
 from controller import Controller
 from run import Run, RunError
 import multiprocessing as mp
 from libcgroup import Mode
+from consts import Consts
 from enum import Enum
 import utils
 import time
@@ -60,36 +61,6 @@ class CgroupMount(object):
         return out_str
 
 
-class CgroupVersion(Enum):
-    CGROUP_UNK = 0
-    CGROUP_V1 = 1
-    CGROUP_V2 = 2
-
-    # given a controller name, get the cgroup version of the controller
-    @staticmethod
-    def get_version(controller):
-        with open('/proc/mounts', 'r') as mntf:
-            for line in mntf.readlines():
-                mnt_path = line.split()[1]
-
-                if line.split()[0] == 'cgroup':
-                    for option in line.split()[3].split(','):
-                        if option == controller:
-                            return CgroupVersion.CGROUP_V1
-                elif line.split()[0] == 'cgroup2':
-                    ctrlf_path = os.path.join(mnt_path, 'cgroup.controllers')
-                    with open(ctrlf_path, 'r') as ctrlf:
-                        controllers = ctrlf.readline()
-                        for ctrl in controllers.split():
-                            if ctrl == controller:
-                                return CgroupVersion.CGROUP_V2
-
-        raise IndexError(
-                            'Unknown version for controller {}'
-                            ''.format(controller)
-                        )
-
-
 class Cgroup(object):
     # This class is analogous to libcgroup's struct cgroup
     def __init__(self, name):
@@ -121,12 +92,12 @@ class Cgroup(object):
 
     @staticmethod
     def build_cmd_path(cmd):
-        return os.path.join(consts.LIBCG_MOUNT_POINT,
+        return os.path.join(Consts.LIBCG_MOUNT_POINT,
                             'src/tools/{}'.format(cmd))
 
     @staticmethod
     def build_daemon_path(cmd):
-        return os.path.join(consts.LIBCG_MOUNT_POINT,
+        return os.path.join(Consts.LIBCG_MOUNT_POINT,
                             'src/daemon/{}'.format(cmd))
 
     @staticmethod
@@ -652,7 +623,7 @@ class Cgroup(object):
             redirect_str = '>'
 
         subcmd = '"echo {} {} {}"'.format(line, redirect_str,
-                                          consts.CGRULES_FILE)
+                                          Consts.CGRULES_FILE)
         cmd.append(subcmd)
 
         if config.args.container:

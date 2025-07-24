@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 from libcgroup import Cgroup, Version
 from cgroup import CgroupVersion
@@ -26,11 +26,11 @@ VALUE2 = '400'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     return result, cause
@@ -45,7 +45,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     cg1 = Cgroup(CGNAME, Version.CGROUP_V1)
@@ -55,7 +55,7 @@ def test(config):
     cg1.cgxget()
 
     if len(cg1.controllers) != 1:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     "Controller length doesn't match, expected 1, but "
                     'received {}'.format(len(cg1.controllers))
@@ -63,7 +63,7 @@ def test(config):
         return result, cause
 
     if len(cg1.controllers[CONTROLLER].settings) != 1:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     "Settings length doesn't match, expected 1, but "
                     ' received {}'
@@ -72,7 +72,7 @@ def test(config):
         return result, cause
 
     if cg1.controllers[CONTROLLER].settings[SETTING1] != VALUE1:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Expected {} = {} but received {}'
                     ''.format(SETTING1, VALUE1,
@@ -87,7 +87,7 @@ def test(config):
     cg2.cgxget()
 
     if len(cg2.controllers) != 1:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     "Controller length doesn't match, expected 1, but"
                     ' received {}'.format(len(cg2.controllers))
@@ -95,7 +95,7 @@ def test(config):
         return result, cause
 
     if len(cg2.controllers[CONTROLLER].settings) != 1:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     "Settings length doesn't match, expected 1, but"
                     'received {}'
@@ -104,7 +104,7 @@ def test(config):
         return result, cause
 
     if cg2.controllers[CONTROLLER].settings[SETTING2] != VALUE2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Expected {} = {} but received {}'
                     ''.format(SETTING2, VALUE2,
@@ -120,7 +120,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

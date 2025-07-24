@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 import ftests
 import sys
@@ -43,7 +43,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     version = CgroupVersion.get_version(CONTROLLER)
@@ -56,7 +56,7 @@ def test(config):
     out = Cgroup.get(config, controller=None, cgname=CGNAME, setting=settings)
 
     if out.splitlines()[0] != '{}:'.format(CGNAME):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'cgget expected the cgroup name {} in the first line.\n'
                     'Instead it received {}'
@@ -64,7 +64,7 @@ def test(config):
                 )
 
     if out.splitlines()[1] != '{}: {}'.format(settings[0], VALUE1):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'cgget expected the following:\n\t{}: {}\n'
                     'but received:\n\t{}'
@@ -72,7 +72,7 @@ def test(config):
                 )
 
     if out.splitlines()[2] != '{}: {}'.format(settings[1], VALUE2):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'cgget expected the following:\n\t{}: {}\n'
                     'but received:\n\t{}'

@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from process import Process
 from systemd import Systemd
 from libcgroup import Mode
@@ -25,20 +25,20 @@ CHILD_CGNAME = 'childcg'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if Cgroup.get_cgroup_mode(config) != Mode.CGROUP_MODE_UNIFIED:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the unified cgroup hierarchy'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
@@ -49,7 +49,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     Cgroup.create_and_validate(config, CONTROLLERS, SCOPE_CGNAME, create_scope=True,
@@ -62,7 +62,7 @@ def test(config):
         # use the pid variable so that lint is happy
         Log.log_debug('Cgroup {} has pid {}'.format(SCOPE_CGNAME, pid))
     except RunError:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = "Failed to read pid in {}'s cgroup.procs".format(SCOPE_CGNAME)
         return result, cause
 
@@ -89,7 +89,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

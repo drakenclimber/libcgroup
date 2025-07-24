@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 import ftests
 import sys
@@ -21,11 +21,11 @@ VALUE = '0'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version('cpuset') != CgroupVersion.CGROUP_V2:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v2 cpuset controller'
 
     return result, cause
@@ -39,7 +39,7 @@ def setup(config):
 def test(config):
     Cgroup.get_and_validate(config, CGNAME, SETTING, VALUE)
 
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def teardown(config):
@@ -48,7 +48,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

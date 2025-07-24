@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from libcgroup import Cgroup
 import ftests
 import sys
@@ -23,23 +23,23 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     [major, minor, release] = Cgroup.library_version()
 
     if not isinstance(major, int):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Major version failed. Received {}'.format(major)
         return result, cause
 
     if not isinstance(minor, int):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Minor version failed. Received {}'.format(minor)
         return result, cause
 
     if not isinstance(release, int):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Release version failed. Received {}'.format(release)
 
     return result, cause

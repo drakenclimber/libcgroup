@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from run import RunError
 import ftests
@@ -21,11 +21,11 @@ CGNAME = '047shared_mnts'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version('cpu') != CgroupVersion.CGROUP_V1:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v1 cpu controller'
 
     # cpuacct controller is only available on cgroup v1, if an exception
@@ -33,7 +33,7 @@ def prereqs(config):
     try:
         CgroupVersion.get_version('cpuacct')
     except IndexError:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v1 cpuacct controller'
 
     return result, cause
@@ -44,7 +44,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     try:
@@ -52,7 +52,7 @@ def test(config):
     except RunError as re:
         if 'No such file or directory' in re.stderr:
             cause = 'cpu and cpuacct controllers do not share mount points.'
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
         else:
             raise re
 
@@ -71,7 +71,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from systemd import Systemd
 from run import RunError
@@ -27,27 +27,27 @@ CONFIG_FILE_NAME = os.path.join(os.getcwd(), '061cgconfig.conf')
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version('cpu') != CgroupVersion.CGROUP_V1:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v1 cpu controller'
         return result, cause
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
 
 
 def setup(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     Systemd.write_config_with_pid(config, CONFIG_FILE_NAME, SLICE, SCOPE)
@@ -56,7 +56,7 @@ def setup(config):
 
     # create and check if the cgroup was created under the systemd default path
     if not Cgroup.create_and_validate(config, CONTROLLER, SYSTEMD_CGNAME):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Failed to create systemd delegated cgroup {} under '
                     '/sys/fs/cgroup/{}/{}/{}/'.format(SYSTEMD_CGNAME, CONTROLLER, SLICE, SCOPE)
@@ -65,7 +65,7 @@ def setup(config):
 
     # create and check if the cgroup was created under the controller root
     if not Cgroup.create_and_validate(config, CONTROLLER, OTHER_CGNAME, ignore_systemd=True):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Failed to create cgroup {} under '
                     '/sys/fs/cgroup/{}/'.format(OTHER_CGNAME, CONTROLLER)
@@ -75,7 +75,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     expected_out_len = 10
@@ -88,7 +88,7 @@ def test(config):
         # This cgget command gets all of the settings/values within the cgroup.
         # We don't care about the exact data, but there should be at least 10
         # lines of settings/values
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'cgget failed to read at least 10 lines from '
                     'cgroup {}: {}'.format(SYSTEMD_CGNAME, out)
@@ -96,7 +96,7 @@ def test(config):
 
     out = Cgroup.get(config, controller=CONTROLLER, cgname=OTHER_CGNAME, ignore_systemd=True)
     if len(out.splitlines()) < expected_out_len:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = (
                         'cgget failed to read at least 10 lines from '
                         'cgroup {}: {}'.format(OTHER_CGNAME, out)
@@ -107,7 +107,7 @@ def test(config):
     out = Cgroup.get(config, controller=CONTROLLER, cgname=SYSTEMD_CGNAME, ignore_systemd=True,
                      print_headers=False)
     if len(out) > 0:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = (
                         'cgget erroneously read cgroup {} at the '
                         'wrong path: {}'.format(SYSTEMD_CGNAME, out)
@@ -117,7 +117,7 @@ def test(config):
     # This should fail because the wrong path should be built up
     out = Cgroup.get(config, controller=CONTROLLER, cgname=OTHER_CGNAME, print_headers=False)
     if len(out) > 0:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = (
                         'cgget erroneously read cgroup {} at the '
                         'wrong path: {}'.format(OTHER_CGNAME, out)
@@ -141,11 +141,11 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     [result, cause] = setup(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         teardown(config)
         return [result, cause]
 

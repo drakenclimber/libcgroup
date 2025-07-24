@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from libcgroup import Cgroup, Version
 from cgroup import CgroupVersion
 import ftests
@@ -22,16 +22,16 @@ CONTROLLER = 'cpu'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if CgroupVersion.get_version(CONTROLLER) != CgroupVersion.CGROUP_V2:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires cgroup v2'
 
     return result, cause
@@ -44,7 +44,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     cg = Cgroup(CGNAME, Version.CGROUP_V2)
@@ -52,7 +52,7 @@ def test(config):
 
     if len(cg.controllers) != 1:
         # only one controller, cpu, should be enabled
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Expected one controller to be enabled, but {} were enabled'.format(
                 len(cg.controllers))
 
@@ -69,11 +69,11 @@ def teardown(config, result):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         setup(config)
         [result, cause] = test(config)
     finally:

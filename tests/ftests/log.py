@@ -6,18 +6,18 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 import datetime
 
-log_level = consts.DEFAULT_LOG_LEVEL
-log_file = consts.DEFAULT_LOG_FILE
+log_level = Consts.DEFAULT_LOG_LEVEL
+log_file = Consts.DEFAULT_LOG_FILE
 log_fd = None
 
 
 class Log(object):
 
     @staticmethod
-    def log(msg, msg_level=consts.DEFAULT_LOG_LEVEL):
+    def log(msg, msg_level=Consts.DEFAULT_LOG_LEVEL):
         global log_level, log_file, log_fd
 
         if log_level >= msg_level:
@@ -35,14 +35,14 @@ class Log(object):
 
     @staticmethod
     def log_critical(msg):
-        Log.log('CRITICAL: {}'.format(msg), consts.LOG_CRITICAL)
+        Log.log('CRITICAL: {}'.format(msg), Consts.LOG_CRITICAL)
 
     @staticmethod
     def log_warning(msg):
-        Log.log('WARNING: {}'.format(msg), consts.LOG_WARNING)
+        Log.log('WARNING: {}'.format(msg), Consts.LOG_WARNING)
 
     @staticmethod
     def log_debug(msg):
-        Log.log('DEBUG: {}'.format(msg), consts.LOG_DEBUG)
+        Log.log('DEBUG: {}'.format(msg), Consts.LOG_DEBUG)
 
 # vim: set et ts=4 sw=4:

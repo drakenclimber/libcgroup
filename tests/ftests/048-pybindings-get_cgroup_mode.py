@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 from libcgroup import Cgroup
 import ftests
@@ -24,14 +24,14 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     mode1 = Cgroup.cgroup_mode()
     mode2 = CgroupCli.get_cgroup_mode(config)
 
     if mode1 != mode2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'mode mismatch: libcgroup mode: {}, tests mode: {}'.format(mode1, mode2)
 
     return result, cause

@@ -8,7 +8,7 @@
 #
 
 from cgroup import Cgroup, CgroupVersion as Version
-from distro import ConstsCommon as consts
+from consts import Consts
 from libcgroup import Mode
 import ftests
 import sys
@@ -37,11 +37,11 @@ DEFAULT_VALUE_V1_V2 = '0-1'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     return result, cause
@@ -81,7 +81,7 @@ def cgroup_settings_helper(config, SETTING, VALUE, DEF_VAL):
 
 
 def cgroup_subtree_helper(config, SUBTREE, SUBTREE_VAL):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     Cgroup.set(config, cgname=PARENT, setting=SUBTREE, value=SUBTREE_VAL,
@@ -91,12 +91,12 @@ def cgroup_subtree_helper(config, SUBTREE, SUBTREE_VAL):
     # check its parent cgroup childcg's subtree_control file, if it's enabled
     # in parent cgroup, it's also enabled in the grandparent too.
     if not Cgroup.is_controller_enabled(config, GRANDCHILD, CONTROLLERS[1]):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Controller {} is not enabled in the child cgroup'.format(CONTROLLERS[1])
 
     # check if 'cpuset' controller is enabled
     if not Cgroup.is_controller_enabled(config, GRANDCHILD, CONTROLLERS[1]):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = ('Controller {} is not enabled in the child cgroup'
                      ''.format('cpuset'))
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
@@ -104,7 +104,7 @@ def cgroup_subtree_helper(config, SUBTREE, SUBTREE_VAL):
     # check if 'pids' controller is enabled
     if Cgroup.get_cgroup_mode(config) == Mode.CGROUP_MODE_UNIFIED:
         if Cgroup.is_controller_enabled(config, GRANDCHILD, CONTROLLERS[2]):
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = ('Controller {} is enabled in the child cgroup'
                          ''.format('pids'))
             cause = '\n'.join(filter(None, [cause, tmp_cause]))
@@ -113,7 +113,7 @@ def cgroup_subtree_helper(config, SUBTREE, SUBTREE_VAL):
     # will check its parent cgroup childcg's subtree_control
     if Cgroup.get(config, None, GRANDCHILD, setting='cgroup.subtree_control',
                   print_headers=False, values_only=True):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Controller {} enabled in grandchild cgroup'.format(CONTROLLERS[1])
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -123,11 +123,11 @@ def cgroup_subtree_helper(config, SUBTREE, SUBTREE_VAL):
 def test_cgroup_legacy(config):
     cgroup_settings_helper(config, SETTING_V1, VALUE_V1, DEFAULT_VALUE_V1)
 
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def test_cgroup_hybrid(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     cgroup_settings_helper(config, SETTING_V1, VALUE_V1, DEFAULT_VALUE_V1)
@@ -168,7 +168,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

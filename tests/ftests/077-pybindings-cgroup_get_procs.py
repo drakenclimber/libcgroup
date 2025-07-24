@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 from libcgroup import Cgroup, Version
 from process import Process
@@ -25,11 +25,11 @@ initial_pid_list = list()
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     return result, cause
@@ -50,7 +50,7 @@ def setup(config):
 
 def test(config):
     global initial_pid_list
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     #
@@ -62,7 +62,7 @@ def test(config):
     pid_list = cg.get_processes().sort()
 
     if pid_list != initial_pid_list:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'The pid lists do not match\n{}\n{}'.format(initial_pid_list, pid_list)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -75,7 +75,7 @@ def test(config):
     empty_pid_list = emptycg.get_processes()
 
     if len(empty_pid_list) != 0:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'The pid list unexpectedly was populated\n{}'.format(empty_pid_list)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -92,7 +92,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

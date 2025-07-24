@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from systemd import Systemd
 from run import RunError
@@ -63,27 +63,27 @@ TABLE = [
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version('cpu') != CgroupVersion.CGROUP_V1:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v1 cpu controller'
         return result, cause
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
 
 
 def setup(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     Systemd.write_config_with_pid(config, CONFIG_FILE_NAME, SLICE, SCOPE)
@@ -92,7 +92,7 @@ def setup(config):
 
     # create and check if the cgroup was created under the systemd default path
     if not Cgroup.create_and_validate(config, CONTROLLER, SYSTEMD_CGNAME):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Failed to create systemd delegated cgroup {} under '
                     '/sys/fs/cgroup/{}/{}/{}/'.format(SYSTEMD_CGNAME, CONTROLLER, SLICE, SCOPE)
@@ -101,7 +101,7 @@ def setup(config):
 
     # create and check if the cgroup was created under the controller sub-tree
     if not Cgroup.create_and_validate(config, CONTROLLER, OTHER_CGNAME, ignore_systemd=True):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Failed to create cgroup {} under '
                     '/sys/fs/cgroup/{}/'.format(OTHER_CGNAME, CONTROLLER)
@@ -111,7 +111,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     cgrps = {SYSTEMD_CGNAME: False, OTHER_CGNAME: True}
@@ -124,7 +124,7 @@ def test(config):
                               version=entry[5], values_only=True,
                               print_headers=False, ignore_systemd=cgrps[i])
             if out != entry[4]:
-                result = consts.TEST_FAILED
+                result = Consts.TEST_FAILED
                 tmp_cause = (
                         'After setting {}={}, expected {}={}, but received '
                         '{}={}'.format(entry[0], entry[1], entry[3], entry[4],
@@ -149,11 +149,11 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     [result, cause] = setup(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:

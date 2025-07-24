@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, Mode
 import ftests
 import sys
@@ -21,11 +21,11 @@ CGNAME2 = os.path.join(CGNAME1, 'grandchildcg')
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if Cgroup.get_cgroup_mode(config) != Mode.CGROUP_MODE_UNIFIED:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the unified cgroup v2 hierarchy'
 
     return result, cause
@@ -36,18 +36,18 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     # checking if the controller is enabled in granchildcg, in turn will
     # check its parent cgroup childcg's subtree_control file, if it's enabled
     # in parent cgroup, it's also enabled in the grandparent too.
     if not Cgroup.is_controller_enabled(config, CGNAME2, CONTROLLERS[0]):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Controller {} is not enabled in the child cgroup'.format(CONTROLLERS[0])
 
     if not Cgroup.is_controller_enabled(config, CGNAME2, CONTROLLERS[1]):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Controller {} is not enabled in the child cgroup'.format(CONTROLLERS[1])
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -55,7 +55,7 @@ def test(config):
     # will check its parent cgroup childcg's subtree_control
     if Cgroup.get(config, None, CGNAME2, setting='cgroup.subtree_control',
                   print_headers=False, values_only=True):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Controller {} enabled in grandchild cgroup'.format(CONTROLLERS[0])
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -68,7 +68,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

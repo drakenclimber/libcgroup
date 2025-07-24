@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup
 from run import RunError
 import ftests
@@ -19,13 +19,13 @@ CGNAME = '016cgget'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     # Github Actions has issues with cgget and the code coverage profiler.
     # This causes issues with the error handling of this test
     if not config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test must be run within a container'
 
     return result, cause
@@ -36,7 +36,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     try:
@@ -44,19 +44,19 @@ def test(config):
         Cgroup.get(config, controller=CONTROLLER)
     except RunError as re:
         if 'Wrong input parameters,' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "#1 Expected 'Wrong input parameters' to be in stderr"
             return result, cause
 
         if re.ret != 129:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#1 Expected return code of 129 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #1 erroneously passed'
         return result, cause
 
@@ -66,19 +66,19 @@ def test(config):
                    cgname=CGNAME)
     except RunError as re:
         if 'Wrong input parameters,' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "#2 Expected 'Wrong input parameters' to be in stderr"
             return result, cause
 
         if re.ret != 129:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#2 Expected return code of 129 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #2 erroneously passed'
         return result, cause
 
@@ -88,7 +88,7 @@ def test(config):
                    print_headers=False, values_only=True)
     except RunError as re:
         if 'cgget: error parsing parameter name' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         "#3 Expected 'cgget: error parsing parameter name' to "
                         'be in stderr'
@@ -98,14 +98,14 @@ def test(config):
         # legacy cgget returns 0 but populates stderr for this case.
         # This feels wrong, so the updated cgget returns ECGINVAL
         if re.ret != 91 and re.ret != 0:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#3 Expected return code of 0 or 91 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #3 erroneously passed'
         return result, cause
 
@@ -115,21 +115,21 @@ def test(config):
                    print_headers=False, values_only=True)
     except RunError as re:
         if 'cgget: cannot find controller' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "#4 Expected 'cgget: cannot find controller' to be in stderr"
             return result, cause
 
         # legacy cgget returns 0 but populates stderr for this case.
         # This feels wrong, so the updated cgget returns ECGOTHER
         if re.ret != 96 and re.ret != 0:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#4 Expected return code of 0 or 96 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #4 erroneously passed'
         return result, cause
 
@@ -139,21 +139,21 @@ def test(config):
                    cgname=CGNAME, print_headers=False, values_only=True)
     except RunError as re:
         if 'variable file read failed' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "#5 Expected 'variable file read failed' to be in stderr"
             return result, cause
 
         # legacy cgget returns 0 but populates stderr for this case.
         # This feels wrong, so the updated cgget returns ECGOTHER
         if re.ret != 96 and re.ret != 0:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#5 Expected return code of 0 or 96 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #5 erroneously passed'
         return result, cause
 
@@ -164,26 +164,26 @@ def test(config):
                    all_controllers=False, cghelp=False)
     except RunError as re:
         if 'Wrong input parameters,' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "#6 Expected 'Wrong input parameters' to be in stderr"
             return result, cause
 
         if re.ret != 129:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#6 Expected return code of 129 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #6 erroneously passed'
         return result, cause
 
     # cgget -h
     ret = Cgroup.get(config, cghelp=True)
     if 'Print parameter(s)' not in ret:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = '#7 Failed to print help text'
 
     return result, cause
@@ -195,7 +195,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

@@ -8,7 +8,7 @@
 #
 
 from cgroup import Cgroup as CgroupCli, Mode, CgroupVersion
-from distro import ConstsCommon as consts
+from consts import Consts
 from libcgroup import Cgroup, Version
 from process import Process
 import ftests
@@ -21,16 +21,16 @@ CONTROLLER = 'cpu'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if Cgroup.cgroup_mode() == Mode.CGROUP_MODE_UNIFIED:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the legacy cgroup v1 hierarchy'
 
     return result, cause
@@ -43,7 +43,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     expected_path = '/' + CGNAME
@@ -57,7 +57,7 @@ def test(config):
     #
     cgrp_path = cgrp.get_current_controller_path(pid, CONTROLLER)
     if cgrp_path != expected_path:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Expected cgroup path {} got {}'.format(expected_path, cgrp_path)
 
     #
@@ -67,7 +67,7 @@ def test(config):
     try:
         cgrp_path = cgrp.get_current_controller_path(pid, 'memory')
         if cgrp_path == expected_path:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = 'cgroup path unexpectedly formed {}'.format(cgrp_path)
             cause = '\n'.join(filter(None, [cause, tmp_cause]))
     except RuntimeError as re:
@@ -122,7 +122,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

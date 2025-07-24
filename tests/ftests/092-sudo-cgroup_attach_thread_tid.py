@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 from libcgroup import Cgroup, Version
 from cgroup import CgroupVersion
@@ -23,16 +23,16 @@ THREADS = 3
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if CgroupVersion.get_version(CONTROLLER) != CgroupVersion.CGROUP_V1:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires cgroup v1'
 
     return result, cause
@@ -57,14 +57,14 @@ def read_cgroup_tasks_file(config, CONTROLLER, CGNAME):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     config.process.create_threaded_process_in_cgroup(config, CONTROLLER, CGNAME1, THREADS)
 
     threads_tid_cg1 = read_cgroup_tasks_file(config, CONTROLLER, CGNAME1)
     if len(threads_tid_cg1) == 0:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'No threads found in cgroup {}'.format(CGNAME1)
         return result, cause
 
@@ -74,7 +74,7 @@ def test(config):
 
     threads_tid_cg2 = read_cgroup_tasks_file(config, CONTROLLER, CGNAME2)
     if len(threads_tid_cg2) == 0:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Thread attach from cgroup {} to {}, failed'.format(CGNAME1, CGNAME2)
         return result, cause
 
@@ -82,13 +82,13 @@ def test(config):
     threads_tid_cg2.sort()
 
     if threads_tid_cg1 != threads_tid_cg2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Not all threads have moved from cgroup {} to {}'. format(CGNAME1, CGNAME2)
         return result, cause
 
     threads_tid_cg1 = read_cgroup_tasks_file(config, CONTROLLER, CGNAME1)
     if len(threads_tid_cg1) != 0:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Threads found in cgroup {} expected none'.format(CGNAME1)
 
     return result, cause
@@ -108,11 +108,11 @@ def teardown(config, result):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         setup(config)
         [result, cause] = test(config)
     finally:

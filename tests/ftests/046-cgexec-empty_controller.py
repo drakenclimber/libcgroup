@@ -6,7 +6,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from process import Process
 import ftests
@@ -18,11 +18,11 @@ CGNAME = '046cgexec'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version(CONTROLLER) != CgroupVersion.CGROUP_V2:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires cgroup v2'
 
     return result, cause
@@ -33,7 +33,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     config.process.create_process_in_cgroup(config, '', CGNAME)
@@ -44,7 +44,7 @@ def test(config):
                         )
 
     if not len(output):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'No process created in the cgroup'
 
     return result, cause
@@ -59,7 +59,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

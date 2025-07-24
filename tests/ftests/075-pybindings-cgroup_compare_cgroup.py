@@ -8,7 +8,7 @@
 #
 
 from cgroup import Cgroup as CgroupCli, Mode
-from distro import ConstsCommon as consts
+from consts import Consts
 from libcgroup import Cgroup, Version
 import ftests
 import sys
@@ -19,16 +19,16 @@ CONTROLLERS = ['cpu', 'memory', 'io', 'pids']
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if Cgroup.cgroup_mode() != Mode.CGROUP_MODE_UNIFIED:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the unified cgroup v2 hierarchy'
 
     return result, cause
@@ -39,7 +39,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     #
@@ -49,7 +49,7 @@ def test(config):
     cgempty2 = Cgroup(CGNAME, Version.CGROUP_V2)
 
     if cgempty1 != cgempty2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Empty cgroups do not match'
 
     #
@@ -59,7 +59,7 @@ def test(config):
     cgempty4 = Cgroup('bar', Version.CGROUP_V2)
 
     if cgempty3 == cgempty4:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Empty cgroups erroneously match'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -70,7 +70,7 @@ def test(config):
     cgempty6 = Cgroup('baz', Version.CGROUP_V2)
 
     if cgempty5 == cgempty6:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Empty cgroups erroneously match'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -85,7 +85,7 @@ def test(config):
         cgctrl2.add_controller(controller)
 
     if cgctrl1 != cgctrl2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Controller-only cgroups do not match'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -100,7 +100,7 @@ def test(config):
     cgget2.get()
 
     if cgget1 != cgget2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'cgget1 and cgget2 cgroups do not match'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -116,25 +116,25 @@ def test(config):
     cguid2.add_all_controllers()
 
     if cguid1 == cguid2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'cguid1 and cguid2 erroneously match'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
     cguid2.set_uid_gid(123, 456, 7890, 987)
     if cguid1 == cguid2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'cguid1 and cguid2 erroneously match'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
     cguid2.set_uid_gid(123, 4560, 789, 987)
     if cguid1 == cguid2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'cguid1 and cguid2 erroneously match'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
     cguid2.set_uid_gid(1230, 456, 789, 987)
     if cguid1 == cguid2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'cguid1 and cguid2 erroneously match'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -150,7 +150,7 @@ def test(config):
     cguid4.add_all_controllers()
 
     if cguid3 != cguid4:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'cguid3 and cguid4 do not match'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -165,7 +165,7 @@ def test(config):
     cgctrl4.add_controller(CONTROLLERS[0])
 
     if cgctrl3 == cgctrl4:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'controller-only cgroups erroneously match'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -178,7 +178,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

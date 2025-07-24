@@ -8,7 +8,7 @@
 #
 
 from libcgroup import Cgroup, Version, Mode
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 import ftests
 import sys
@@ -19,11 +19,11 @@ CONTROLLERS = ['cpu', 'memory', 'pids']
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupCli.get_cgroup_mode(config) != Mode.CGROUP_MODE_LEGACY:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the legacy cgroup hierarchy'
 
     return result, cause
@@ -34,7 +34,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     cgall = Cgroup(CGNAME, Version.CGROUP_V1)
@@ -51,14 +51,14 @@ def test(config):
                 controllers.append(line.split()[0])
 
     if len(controllers) != len(cgall.controllers):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Expected {} controllers in cgall but received {}'.format(
                     len(CONTROLLERS), len(cgall.controllers))
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
     for controller in CONTROLLERS:
         if len(str(cgall.controllers[controller])) <= 1:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = 'Controller {} was not populated'.format(controller)
             cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -71,7 +71,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

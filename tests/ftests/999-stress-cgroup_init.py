@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from libcgroup import Cgroup
 from run import Run
 import ftests
@@ -27,7 +27,7 @@ def cgroup_path(count):
 
 
 def prereqs(config):
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def setup(config):
@@ -50,7 +50,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     try:
@@ -58,13 +58,13 @@ def test(config):
     except RuntimeError as re:
         if 'Failed to initialize libcgroup: 50008' not in str(re):
             cause = str(re)
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
 
     return result, cause
 
 
 def teardown(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     for count in range(MNT_COUNT):

@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from process import Process
 from cgroup import Cgroup
 import ftests
@@ -20,10 +20,10 @@ CGNAME = '034cgexec'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
     if not config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test must be run within a container'
 
     return result, cause
@@ -34,7 +34,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     config.process.create_process_in_cgroup(config, CONTROLLER, CGNAME,
@@ -42,7 +42,7 @@ def test(config):
 
     pids = Cgroup.get_pids_in_cgroup(config, CGNAME, CONTROLLER)
     if pids is None:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'No processes were found in cgroup {}'.format(CGNAME)
         return result, cause
 
@@ -50,7 +50,7 @@ def test(config):
     ret = Cgroup.cgexec(config, controller=CONTROLLER, cgname=CGNAME,
                         cmdline=None, cghelp=True)
     if 'Run the task in given control group(s)' not in ret:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Failed to print cgexec help text: {}'.format(ret)
 
     return result, cause
@@ -65,7 +65,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

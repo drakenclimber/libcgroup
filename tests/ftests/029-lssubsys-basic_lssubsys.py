@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 import ftests
 import sys
@@ -23,7 +23,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     mount_list = Cgroup.get_cgroup_mounts(config, expand_v2_mounts=False)
@@ -51,7 +51,7 @@ def test(config):
                 break
 
         if not found:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         'Failed to find {} in lssubsys list'
                         ''.format(mount.controller)

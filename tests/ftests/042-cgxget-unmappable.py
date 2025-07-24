@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 import ftests
 import sys
@@ -27,7 +27,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version(CONTROLLER) == CgroupVersion.CGROUP_V1:
@@ -42,7 +42,7 @@ def test(config):
                         ignore_unmappable=True
                       )
     if len(out):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Expected cgxget to return nothing.  Received {}'.format(out)
 
     return result, cause

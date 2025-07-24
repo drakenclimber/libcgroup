@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 import ftests
 import sys
@@ -37,14 +37,14 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     out = Cgroup.get(config, cgname=CGNAME, all_controllers=True)
 
     # arbitrary check to ensure we read several lines
     if len(out.splitlines()) < 20:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Expected multiple lines, but only received {}'
                     ''.format(len(out.splitlines()))
@@ -54,13 +54,13 @@ def test(config):
     # arbitrary check for a setting that's in both cgroup v1 and cgroup v2
     # memory.stat
     if '\tpgmajfault' not in out:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Unexpected output\n{}'.format(out)
         return result, cause
 
     # make sure that a cpuset value was in the output:
     if 'cpuset.cpus' not in out:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Failed to find cpuset settings in output\n{}'.format(out)
 
     return result, cause

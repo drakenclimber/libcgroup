@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from run import RunError
 import ftests
@@ -110,7 +110,7 @@ TABLE = [
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     return result, cause
@@ -121,7 +121,7 @@ def setup(config):
 
 
 def invalid_values_test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     try:
@@ -131,7 +131,7 @@ def invalid_values_test(config):
         # we passed in an invalid value.  this should fail
         pass
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'cgxset unexpectedly succeeded'
 
     try:
@@ -141,18 +141,18 @@ def invalid_values_test(config):
         # we passed in an invalid value.  this should fail
         pass
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'cgxset unexpectedly succeeded'
 
     return result, cause
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     result, cause = invalid_values_test(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return result, cause
 
     for entry in TABLE:
@@ -164,7 +164,7 @@ def test(config):
                           print_headers=False)
 
         if out != entry[4]:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         'After setting {}={}, expected {}={}, but received '
                         '{}={}'
@@ -182,7 +182,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

@@ -9,9 +9,9 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
-from distro.consts_abstract import ConstsAbstract
-from cgroup import CgroupVersion
+from consts.consts_abstract import ConstsAbstract
+from consts.consts_common import ConstsCommon
+from cgroup_version import CgroupVersion
 
 EXPECTED_CPU_OUT_V1 = [
     """cpu.cfs_period_us: 100000

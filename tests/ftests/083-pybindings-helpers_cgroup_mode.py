@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 from libcgroup import Cgroup, Mode
 import ftests
@@ -24,34 +24,34 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     mode1 = Cgroup.cgroup_mode()
     mode2 = CgroupCli.get_cgroup_mode(config)
 
     if mode1 != mode2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'mode mismatch: libcgroup mode: {}, tests mode: {}'.format(mode1, mode2)
         return result, cause
 
     if mode1 == Mode.CGROUP_MODE_LEGACY:
         ret = Cgroup.is_cgroup_mode_legacy()
         if ret is False:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'mode mismatch: libcgroup mode: legacy (v1) check, returned false'
     elif mode1 == Mode.CGROUP_MODE_HYBRID:
         ret = Cgroup.is_cgroup_mode_hybrid()
         if ret is False:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'mode mismatch: libcgroup mode: hybrid (v1/v2) check, returned false'
     elif mode1 == Mode.CGROUP_MODE_UNIFIED:
         ret = Cgroup.is_cgroup_mode_unified()
         if ret is False:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'mode mismatch: libcgroup mode: unified (v2) check, returned false'
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Unknown libcgroup mode: {}'.format(mode1)
 
     return result, cause

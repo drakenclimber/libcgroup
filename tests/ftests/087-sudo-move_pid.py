@@ -8,7 +8,7 @@
 #
 
 from libcgroup import Cgroup, Mode, Version
-from distro import ConstsCommon as consts
+from consts import Consts
 from process import Process
 import ftests
 import sys
@@ -18,18 +18,18 @@ CGNAME = '087movepid'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if Cgroup.cgroup_mode() != Mode.CGROUP_MODE_UNIFIED:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the unified cgroup hierarchy'
 
     return result, cause
 
 
 def setup(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     cg = Cgroup(CGNAME, Version.CGROUP_V2)
@@ -39,21 +39,21 @@ def setup(config):
 
     path = Cgroup.get_current_controller_path(pid)
     if path == '/' + CGNAME:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'The PID was already in the destination cgroup {}'.format(CGNAME)
 
     return result, cause, pid
 
 
 def test(config, pid):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     Cgroup.move_process(pid, CGNAME)
 
     path = Cgroup.get_current_controller_path(pid)
     if path != '/' + CGNAME:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Expected the pid to be in {} cgroup, but was instead in {}'.format(CGNAME, path)
 
     return result, cause
@@ -68,11 +68,11 @@ def teardown(config, pid):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     [result, cause, pid] = setup(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         teardown(config, pid)
         return [result, cause]
 

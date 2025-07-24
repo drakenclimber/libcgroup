@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import CgroupVersion, Cgroup
 from run import RunError
 import ftests
@@ -21,11 +21,11 @@ expected_err = "cgdelete: cannot remove group '%s': No such file or directory" %
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version('cpu') != CgroupVersion.CGROUP_V1:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v1 cpu controller'
         return result, cause
 
@@ -34,25 +34,25 @@ def prereqs(config):
     try:
         CgroupVersion.get_version('cpuacct')
     except IndexError:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v1 cpuacct controller'
 
     return result, cause
 
 
 def setup(config):
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     try:
         Cgroup.delete(config, CONTROLLER, CGNAME)
     except RunError as re:
         if expected_err not in re.stderr and re.ret != 82:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'Expected {}'.format(expected_err)
             return result, cause
 
@@ -60,23 +60,23 @@ def test(config):
         Cgroup.delete(config, CONTROLLER, CGNAME, recursive=True)
     except RunError as re:
         if expected_err not in re.stderr and re.ret != 82:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'Expected {}'.format(expected_err)
 
     return result, cause
 
 
 def teardown(config):
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         setup(config)
         [result, cause] = test(config)
     finally:

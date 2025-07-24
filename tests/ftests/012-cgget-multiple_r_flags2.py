@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 import ftests
 import sys
@@ -58,7 +58,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     version = CgroupVersion.get_version(CONTROLLER)
@@ -73,7 +73,7 @@ def test(config):
 
     for line_num, line in enumerate(out.splitlines()):
         if line.strip() != EXPECTED_OUT.splitlines()[line_num].strip():
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         'Expected line:\n\t{}\nbut received line:\n\t{}'
                         ''.format(EXPECTED_OUT.splitlines()[line_num].strip(),

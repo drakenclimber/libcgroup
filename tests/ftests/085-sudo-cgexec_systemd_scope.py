@@ -8,7 +8,7 @@
 #
 
 from multiprocessing import active_children
-from distro import ConstsCommon as consts
+from consts import Consts
 from process import Process
 from systemd import Systemd
 from cgroup import Cgroup
@@ -26,15 +26,15 @@ OUT_OF_SCOPE_CGNAME2 = '085outofscope.scope'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
@@ -45,7 +45,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     Cgroup.create_and_validate(config, CONTROLLER, CGNAME, create_scope=True)
@@ -62,7 +62,7 @@ def test(config):
 
     pid = Cgroup.get_pids_in_cgroup(config, CGNAME, CONTROLLER)[0]
     if idle_pid == pid:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Failed to replace scope idle_thread pid {} {}'.format(idle_pid, pid)
         return result, cause
 
@@ -79,7 +79,7 @@ def test(config):
 
     replace_pid = Cgroup.get_pids_in_cgroup(config, CGNAME, CONTROLLER)[0]
     if replace_pid != pid:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = ('Erroneously replaced scope non idle_thread pid {} with '
                  'pid {}'.format(pid, replace_pid))
         return result, cause
@@ -97,7 +97,7 @@ def test(config):
 
     pid = Cgroup.get_pids_in_cgroup(config, OUT_OF_SCOPE_CGNAME1, CONTROLLER)
     if len(pid) != 0:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = ('Erroneously succeeded in creating task in non scope cgroup: '
                  'pid {}'.format(pid))
         return result, cause
@@ -116,7 +116,7 @@ def test(config):
 
     pid = Cgroup.get_pids_in_cgroup(config, OUT_OF_SCOPE_CGNAME2, CONTROLLER)
     if len(pid) != 0:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = ('Erroneously succeeded in creating task in non scope cgroup: '
                  'pid {}'.format(pid))
 
@@ -145,7 +145,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

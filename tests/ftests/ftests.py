@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from config import Config
 from run import Run
 import datetime
@@ -30,7 +30,7 @@ def parse_args():
                             help='name of the container',
                             required=False,
                             type=str,
-                            default=consts.DEFAULT_CONTAINER_NAME
+                            default=Consts.DEFAULT_CONTAINER_NAME
                         )
     parser.add_argument(
                             '-d', '--distro',
@@ -82,7 +82,7 @@ def parse_args():
                             help='Test number to run.  If unspecified, all '
                                  'tests are run',
                             required=False,
-                            default=consts.TESTS_RUN_ALL,
+                            default=Consts.TESTS_RUN_ALL,
                             type=int
                         )
     parser.add_argument(
@@ -98,7 +98,7 @@ def parse_args():
                             '-s', '--suite',
                             help='Test suite to run, e.g. cpuset',
                             required=False,
-                            default=consts.TESTS_RUN_ALL_SUITES,
+                            default=Consts.TESTS_RUN_ALL_SUITES,
                             type=str
                         )
 
@@ -221,7 +221,7 @@ def setup(config, do_teardown=True, record_time=False):
         config.container.start()
 
         # add the libcgroup library to the container's ld
-        libcgrp_lib_path = os.path.join(consts.LIBCG_MOUNT_POINT, 'src/.libs')
+        libcgrp_lib_path = os.path.join(Consts.LIBCG_MOUNT_POINT, 'src/.libs')
         echo_cmd = ([
                         'bash',
                         '-c',
@@ -269,12 +269,12 @@ def run_tests(config):
                                 )
                 continue
 
-            if config.args.suite == consts.TESTS_RUN_ALL_SUITES or \
+            if config.args.suite == Consts.TESTS_RUN_ALL_SUITES or \
                config.args.suite == filesuite:
-                if config.args.num == consts.TESTS_RUN_ALL or \
+                if config.args.num == Consts.TESTS_RUN_ALL or \
                    config.args.num == filenum_int:
 
-                    if config.args.suite == consts.TESTS_RUN_ALL_SUITES and \
+                    if config.args.suite == Consts.TESTS_RUN_ALL_SUITES and \
                        filesuite == 'sudo':
                         # Don't run the 'sudo' tests if all tests have been specified.
                         # The sudo tests must be run as sudo and thus need to be separately
@@ -299,18 +299,18 @@ def run_tests(config):
                         # a crummy test
                         failure_cause = e
                         Log.log_debug(e)
-                        ret = consts.TEST_FAILED
+                        ret = Consts.TEST_FAILED
                     finally:
                         run_time = time.time() - start_time
-                        if ret == consts.TEST_PASSED:
+                        if ret == Consts.TEST_PASSED:
                             passed_tests.append([filename, run_time])
-                        elif ret == consts.TEST_FAILED:
+                        elif ret == Consts.TEST_FAILED:
                             failed_tests.append([
                                                  filename,
                                                  run_time,
                                                  failure_cause
                                                  ])
-                        elif ret == consts.TEST_SKIPPED:
+                        elif ret == Consts.TEST_SKIPPED:
                             skipped_tests.append([
                                                   filename,
                                                   run_time,

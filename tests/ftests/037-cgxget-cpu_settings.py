@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 import ftests
 import sys
@@ -62,7 +62,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     for entry in TABLE:
@@ -73,7 +73,7 @@ def test(config):
                           version=entry[5], values_only=True,
                           print_headers=False)
         if out != entry[4]:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                     'After setting {}={}, expected {}={}, but received '
                     '{}={}'.format(entry[0], entry[1], entry[3], entry[4],

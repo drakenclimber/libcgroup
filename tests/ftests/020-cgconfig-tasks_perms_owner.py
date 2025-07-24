@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from container import ContainerError
 from run import Run, RunError
@@ -33,11 +33,11 @@ CONFIG_FILE_NAME = os.path.join(os.getcwd(), '020cgconfig.conf')
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version('cpuset') != CgroupVersion.CGROUP_V1:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v1 cpuset controller'
 
     return result, cause
@@ -57,7 +57,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     Cgroup.configparser(config, load_file=CONFIG_FILE_NAME, tperm=TPERM,
@@ -70,7 +70,7 @@ def test(config):
     group = utils.get_file_owner_group_name(config, tasks_path)
 
     if user != USER:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Owner name failed.  Expected {}, received {}\n'
                     ''.format(USER, user)
@@ -78,7 +78,7 @@ def test(config):
         return result, cause
 
     if group != GROUP:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Owner group failed.  Expected {}, received {}\n'
                     ''.format(GROUP, group)
@@ -87,7 +87,7 @@ def test(config):
 
     tperm = utils.get_file_permissions(config, tasks_path)
     if tperm != TPERM:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'File permissions failed.  Expected {}, received {}\n'
                     ''.format(TPERM, tperm)
@@ -114,7 +114,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:

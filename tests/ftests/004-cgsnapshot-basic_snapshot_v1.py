@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from run import RunError
 import ftests
@@ -49,16 +49,16 @@ CGSNAPSHOT_NOSWAP = """                    }
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version('memory') != CgroupVersion.CGROUP_V1:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v1 memory controller'
         return result, cause
 
     if not config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test must be run within a container'
 
     return result, cause
@@ -69,7 +69,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     try:
@@ -85,7 +85,7 @@ def test(config):
     actual = Cgroup.snapshot(config, controller=CONTROLLER)
 
     if expected[CGNAME] != actual[CGNAME]:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Expected cgsnapshot result did not equal actual cgsnapshot'
 
     return result, cause
@@ -97,7 +97,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 import ftests
 import utils
@@ -36,7 +36,7 @@ EXPECTED_OUT1 = """{}:/{}/
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     v2_cnt = 0
@@ -50,7 +50,7 @@ def prereqs(config):
         # There is a bug in lscgroup - see issue #50 - where it doesn't
         # properly list the enabled controllers for a cgroup v2 cgroup.
         # Skip this test because of this
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'See Github Issue #50 - lscgroup lists controllers...'
 
     return result, cause
@@ -67,12 +67,12 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     out = Cgroup.lscgroup(config, controller=CONTROLLER, path=PARENT_CGNAME)
     if out != EXPECTED_OUT1:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     "Expected lscgroup output doesn't match received output\n'"
                     'Expected:\n{}\n'
@@ -90,7 +90,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

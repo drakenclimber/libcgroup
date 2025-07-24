@@ -6,7 +6,7 @@
 # Copyright (c) 2023 Oracle and/or its affiliates.
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from systemd import Systemd
 from process import Process
 from cgroup import Cgroup
@@ -67,15 +67,15 @@ CONFIGURATIONS = [
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
@@ -92,7 +92,7 @@ def write_conf_file(config, configurations):
 
 
 def test_invalid_configurations(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     # Try parsing invalid systemd configurations from CONFIGURATION table
@@ -104,14 +104,14 @@ def test_invalid_configurations(config):
             Cgroup.configparser(config, load_file=CONFIG_FILE_NAME)
         except RunError as re:
             if configuration[1] not in re.stdout:
-                result = consts.TEST_FAILED
+                result = Consts.TEST_FAILED
                 tmp_cause = (
                             'Unexpected error {}, while parsing configuration:'
                             '\n{}'.format(re.stdout, configuration[0])
                         )
                 cause = '\n'.join(filter(None, [cause, tmp_cause]))
         else:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = (
                         'Creation of systemd default slice/scope, erroneously succeeded with'
                         'configuration:\n{}'.format(configuration[0])
@@ -122,11 +122,11 @@ def test_invalid_configurations(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     result, cause = test_invalid_configurations(config)
-    if result == consts.TEST_FAILED:
+    if result == Consts.TEST_FAILED:
         return result, cause
 
     pid = Systemd.write_config_with_pid(config, CONFIG_FILE_NAME, SLICE, SCOPE)
@@ -135,7 +135,7 @@ def test(config):
     Cgroup.configparser(config, load_file=CONFIG_FILE_NAME)
 
     if not Cgroup.exists(config, CONTROLLER, os.path.join(SLICE, SCOPE), ignore_systemd=True):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Failed to create systemd slice/scope'
         return result, cause
 
@@ -149,10 +149,10 @@ def test(config):
                 'already exists' not in re.stdout and
                 'was already loaded or has a fragment file' not in re.stdout
            ):
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'Unexpected error  {}'.format(re.stdout)
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Creation of systemd default slice/scope erroneously succeeded'
 
     # killing the pid should remove the scope cgroup too.
@@ -162,7 +162,7 @@ def test(config):
     time.sleep(1)
 
     if Cgroup.exists(config, CONTROLLER, os.path.join(SLICE, SCOPE), ignore_systemd=True):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Systemd failed to remove the scope {}'.format(SCOPE)
 
     return result, cause
@@ -179,11 +179,11 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         setup(config)
         [result, cause] = test(config)
     finally:

@@ -8,7 +8,7 @@
 #
 
 from cgroup import CgroupVersion as CgroupCliVersion
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 from libcgroup import Cgroup, Version
 from systemd import Systemd
@@ -41,20 +41,20 @@ CTRL_GID = 5791
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if CgroupCliVersion.get_version(CONTROLLER) != CgroupCliVersion.CGROUP_V2:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires cgroup v2'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
@@ -67,7 +67,7 @@ def setup(config):
 def test(config):
     global pid
 
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     pid = config.process.create_process(config)
@@ -81,11 +81,11 @@ def test(config):
     cg.create_scope2(ignore_ownership=False, pid=pid)
 
     if not Systemd.is_delegated(config, os.path.basename(CGNAME)):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Cgroup is not delegated'
 
     if not CgroupCli.is_controller_enabled(config, CGNAME, CONTROLLER):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Controller {} is not enabled in the parent cgroup'.format(CONTROLLER)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -93,7 +93,7 @@ def test(config):
 
     dir_mode = utils.get_file_permissions(config, dir_path)
     if int(dir_mode, 8) != DIR_MODE:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = "Expected directory mode to be {} but it's {}".format(
                     format(DIR_MODE, '03o'), dir_mode)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
@@ -103,20 +103,20 @@ def test(config):
 
     ctrl_mode = utils.get_file_permissions(config, ctrl_path)
     if int(ctrl_mode, 8) != CTRL_MODE:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = "Expected cgroup.procs mode to be {} but it's {}".format(
                     format(CTRL_MODE, '03o'), ctrl_mode)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
     uid = utils.get_file_owner_uid(config, ctrl_path)
     if uid != CTRL_UID:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = "Expected cgroup.procs owner to be {} but it's {}".format(CTRL_UID, uid)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
     gid = utils.get_file_owner_gid(config, ctrl_path)
     if gid != CTRL_GID:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = "Expected cgroup.procs group to be {} but it's {}".format(CTRL_GID, gid)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -128,7 +128,7 @@ def teardown(config, result):
 
     Process.kill(config, pid)
 
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         # Something went wrong.  Let's force the removal of the cgroups just to be safe.
         # Note that this should remove the cgroup, but it won't remove it from systemd's
         # internal caches, so the system may not return to its 'pristine' prior-to-this-test
@@ -142,16 +142,16 @@ def teardown(config, result):
         # once there are no processes inside of it
         pass
 
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         setup(config)
         [result, cause] = test(config)
     finally:

@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from run import Run, RunError
 import ftests
@@ -69,16 +69,16 @@ TABLE = [
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     nproc = Run.run('nproc')
     if int(nproc) < 2:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires 2 or more processors'
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     return result, cause
@@ -104,7 +104,7 @@ def is_cpuset_exclusive_oddity(entry, out):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     for entry in TABLE:
@@ -125,7 +125,7 @@ def test(config):
             if (is_cpuset_exclusive_oddity(entry, out)):
                 continue
 
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         'After setting {}={}, expected {}={}, but received '
                         '{}={}'
@@ -143,7 +143,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

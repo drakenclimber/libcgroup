@@ -8,7 +8,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup
 from process import Process
 from libcgroup import Mode
@@ -25,16 +25,16 @@ INVAL_SCOPE_NAMES = ['997', '997.scop1', '997.scope1', '.scope', 'cpu.scope']
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if Cgroup.get_cgroup_mode(config) != Mode.CGROUP_MODE_UNIFIED:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the unified cgroup hierarchy'
 
     return result, cause
@@ -45,7 +45,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     for slice_name in INVAL_SLICE_NAMES:
@@ -57,7 +57,7 @@ def test(config):
             if 'Invalid unit name' not in str(re.stdout):
                 raise re
         else:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = 'Erroneously succeeded in creating slice {}', format(CGNAME)
             cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -73,7 +73,7 @@ def test(config):
                ):
                 raise re
         else:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = 'Erroneously succeeded in creating scope {}', format(CGNAME)
             cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -106,13 +106,13 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)
 
     [result, cause] = test(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         teardown(config)
 
     return [result, cause]

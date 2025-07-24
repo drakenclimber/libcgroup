@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 from cgroup import CgroupVersion
 from libcgroup import Cgroup
@@ -28,20 +28,20 @@ CONTROLLER = 'cpu'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if CgroupVersion.get_version(CONTROLLER) != CgroupVersion.CGROUP_V2:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires cgroup v2'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
@@ -54,14 +54,14 @@ def setup(config):
 def test(config):
     global pid
 
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     pid = int(config.process.create_process(config))
     Cgroup.create_scope(SCOPE, slice_name=SLICE, pid=pid)
 
     if not Systemd.is_delegated(config, SCOPE):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Cgroup is not delegated'
 
     return result, cause
@@ -72,7 +72,7 @@ def teardown(config, result):
 
     Process.kill(config, pid)
 
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         # Something went wrong.  Let's force the removal of the cgroups just to be safe.
         # Note that this should remove the cgroup, but it won't remove it from systemd's
         # internal caches, so the system may not return to its 'pristine' prior-to-this-test
@@ -86,16 +86,16 @@ def teardown(config, result):
         # once there are no processes inside of it
         pass
 
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         setup(config)
         [result, cause] = test(config)
     finally:

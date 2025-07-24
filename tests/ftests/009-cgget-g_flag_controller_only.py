@@ -7,8 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro.consts_distro import ConstsDistro
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup
 import ftests
 import utils
@@ -29,26 +28,27 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_FAILED
+    result = Consts.TEST_FAILED
     cause = None
+
+    consts = Consts()
 
     out = Cgroup.get(config, controller=CONTROLLER, cgname=CGNAME,  print_headers=False)
 
-    EXPECTED_OUT = ConstsDistro.get_consts(config).expected_cpu_out_009()
+    EXPECTED_OUT = consts.distro.expected_cpu_out_009()
 
     for expected_out in EXPECTED_OUT:
         if len(out.splitlines()) == len(expected_out.splitlines()):
-            if len(out.splitlines()) == len(expected_out.splitlines()):
-                result_, tmp_cause = utils.is_output_same(config, out, expected_out)
-                if result_ is True:
-                    result = consts.TEST_PASSED
-                    cause = None
-                    break
-                else:
-                    if cause is None:
-                        cause = 'Tried Matching:\n==============='
+            result_, tmp_cause = utils.is_output_same(config, out, expected_out)
+            if result_ is True:
+                result = Consts.TEST_PASSED
+                cause = None
+                break
+            else:
+                if cause is None:
+                    cause = 'Tried Matching:\n==============='
 
-                    cause = '\n'.join(filter(None, [cause, expected_out]))
+                cause = '\n'.join(filter(None, [cause, expected_out]))
 
     return result, cause
 

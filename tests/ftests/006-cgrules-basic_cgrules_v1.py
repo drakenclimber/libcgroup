@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from process import Process
 import ftests
@@ -29,16 +29,16 @@ cg = Cgroup(os.path.join(PARENT_CGNAME, CHILD_CGNAME))
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if CgroupVersion.get_version('cpu') != CgroupVersion.CGROUP_V1:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v1 cpu controller'
 
     return result, cause
@@ -54,7 +54,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     pid = config.process.create_process(config)
@@ -62,7 +62,7 @@ def test(config):
 
     # proc/{pid}/cgroup alsways prepends a '/' to the cgroup path
     if proc_cgroup != os.path.join('/', PARENT_CGNAME, CHILD_CGNAME):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'PID {} was expected to be in cgroup {} but is in '
                     'cgroup {}'
@@ -83,7 +83,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:

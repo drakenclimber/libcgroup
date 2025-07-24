@@ -8,7 +8,7 @@
 #
 
 from cgroup import Cgroup as CgroupCli, CgroupVersion
-from distro import ConstsCommon as consts
+from consts import Consts
 from libcgroup import Cgroup, Version
 import ftests
 import utils
@@ -27,11 +27,11 @@ TASK_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version(CONTROLLER) != CgroupVersion.CGROUP_V1:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires cgroup v1'
 
     return result, cause
@@ -42,7 +42,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     cg = Cgroup(CGNAME, Version.CGROUP_V1)
@@ -54,7 +54,7 @@ def test(config):
 
     dir_mode = utils.get_file_permissions(config, dir_path)
     if int(dir_mode, 8) != DIR_MODE:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = "Expected directory mode to be {} but it's {}".format(
                     format(DIR_MODE, '03o'), dir_mode)
 
@@ -63,7 +63,7 @@ def test(config):
 
     ctrl_mode = utils.get_file_permissions(config, ctrl_path)
     if int(ctrl_mode, 8) != CTRL_MODE:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = "Expected cgroup.procs mode to be {} but it's {}".format(
                     format(CTRL_MODE, '03o'), ctrl_mode)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
@@ -73,7 +73,7 @@ def test(config):
 
     task_mode = utils.get_file_permissions(config, task_path)
     if int(task_mode, 8) != TASK_MODE:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = "Expected tasks mode to be {} but it's {}".format(
                     format(TASK_MODE, '03o'), task_mode)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
@@ -87,7 +87,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

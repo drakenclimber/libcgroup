@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from systemd import Systemd
 from process import Process
@@ -32,27 +32,27 @@ OTHER_PIDS = ''
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version('cpu') != CgroupVersion.CGROUP_V2:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v2 cpu controller'
         return result, cause
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
 
 
 def setup(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     pid = Systemd.write_config_with_pid(config, CONFIG_FILE_NAME, SLICE, SCOPE)
@@ -61,7 +61,7 @@ def setup(config):
 
     # create and check if the cgroup was created under the systemd default path
     if not Cgroup.create_and_validate(config, None, SYSTEMD_CGNAME):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Failed to create systemd delegated cgroup {} under '
                     '/sys/fs/cgroup/{}/{}/'.format(SYSTEMD_CGNAME, SLICE, SCOPE)
@@ -81,7 +81,7 @@ def setup(config):
 
     # create and check if the cgroup was created under the controller root
     if not Cgroup.create_and_validate(config, CONTROLLER, OTHER_CGNAME, ignore_systemd=True):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Failed to create cgroup {} under '
                     '/sys/fs/cgroup/{}/'.format(OTHER_CGNAME, CONTROLLER)
@@ -91,7 +91,7 @@ def setup(config):
 
 
 def create_process_get_pid(config, CGNAME, SLICENAME='', ignore_systemd=False):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     config.process.create_process_in_cgroup(
@@ -101,7 +101,7 @@ def create_process_get_pid(config, CGNAME, SLICENAME='', ignore_systemd=False):
 
     pids = Cgroup.get_pids_in_cgroup(config, os.path.join(SLICENAME, CGNAME), CONTROLLER)
     if pids is None:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'No processes were found in cgroup {}'.format(CGNAME)
 
     return pids, result, cause
@@ -110,7 +110,7 @@ def create_process_get_pid(config, CGNAME, SLICENAME='', ignore_systemd=False):
 def test(config):
     global SYSTEMD_PIDS, OTHER_PIDS
 
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     # Test cgclassify, that creates a process and then uses cgclassify
@@ -119,14 +119,14 @@ def test(config):
                                                             config, SYSTEMD_CGNAME,
                                                             os.path.join(SLICE, SCOPE)
                                                         )
-    if result == consts.TEST_FAILED:
+    if result == Consts.TEST_FAILED:
         return result, cause
 
     OTHER_PIDS, result, tmp_cause = create_process_get_pid(
                                                                 config, OTHER_CGNAME,
                                                                 ignore_systemd=True
                                                           )
-    if result == consts.TEST_FAILED:
+    if result == Consts.TEST_FAILED:
         return result, cause
 
     # classify a task from the non-systemd scope cgroup (OTHER_CGNAME) to
@@ -140,7 +140,7 @@ def test(config):
         if re.stderr != err_str:
             raise re
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Changing group of pid {} erroneously succeeded'.format(OTHER_PIDS[0])
 
     # classify a task from the systemd scope cgroup (SYSTEMD_CGNAME) to
@@ -155,7 +155,7 @@ def test(config):
         if re.stderr != err_str:
             raise re
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Changing group of pid {} erroneously succeeded'.format(SYSTEMD_PIDS[1])
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -193,11 +193,11 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     [result, cause] = setup(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:

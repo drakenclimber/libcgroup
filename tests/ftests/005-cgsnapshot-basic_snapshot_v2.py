@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 import ftests
 import sys
@@ -44,11 +44,11 @@ CGSNAPSHOT = [
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version('cpuset') != CgroupVersion.CGROUP_V2:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the cgroup v2 cpuset controller'
 
     return result, cause
@@ -59,7 +59,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     expected_1 = Cgroup.snapshot_to_dict(CGSNAPSHOT[0])
@@ -75,7 +75,7 @@ def test(config):
             expected_sudo[CGNAME].controllers[CONTROLLER] !=
             actual[CGNAME].controllers[CONTROLLER]
        ):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Expected cgsnapshot result did not equal actual cgsnapshot'
 
     return result, cause
@@ -87,7 +87,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

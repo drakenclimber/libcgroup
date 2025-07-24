@@ -9,9 +9,9 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
-from distro.consts_abstract import ConstsAbstract
-from cgroup import CgroupVersion
+from consts.consts_abstract import ConstsAbstract
+from consts.consts_common import ConstsCommon
+from cgroup_version import CgroupVersion
 
 EXPECTED_CPU_OUT_V1 = [
     # OL8 4.18.0-553.58.1
@@ -76,13 +76,13 @@ class ConstsOracle(ConstsAbstract):
     def expected_cpu_out_013(self, controller='cpu'):
         EXPECTED_CPU_OUT = self.expected_cpu_out_009(controller)
         # Append pid controller [0] and cpu controller [N - 2]
-        EXPECTED_OUT = [consts.EXPECTED_PIDS_OUT[0] + expected_out
+        EXPECTED_OUT = [ConstsCommon.EXPECTED_PIDS_OUT[0] + expected_out
                         for expected_out in EXPECTED_CPU_OUT[:-2]]
         # Append pid controller [1] and cpu controller [N, N - 1]
-        EXPECTED_OUT.extend(consts.EXPECTED_PIDS_OUT[1] + expected_out
+        EXPECTED_OUT.extend(ConstsCommon.EXPECTED_PIDS_OUT[1] + expected_out
                             for expected_out in EXPECTED_CPU_OUT[-2:])
         # Append pid controller [2] and cpu controller [N, N - 1]
-        EXPECTED_OUT.extend(consts.EXPECTED_PIDS_OUT[2] + expected_out
+        EXPECTED_OUT.extend(ConstsCommon.EXPECTED_PIDS_OUT[2] + expected_out
                             for expected_out in EXPECTED_CPU_OUT[-2:])
 
         return EXPECTED_OUT

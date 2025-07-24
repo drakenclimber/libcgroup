@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from container import ContainerError
 from run import Run, RunError
 from cgroup import Cgroup
@@ -51,7 +51,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     Cgroup.configparser(config, load_file=CONFIG_FILE_NAME, dflt_usr=USER,
@@ -64,7 +64,7 @@ def test(config):
     group = utils.get_file_owner_group_name(config, cpus_path)
 
     if user != USER:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Owner name failed.  Expected {}, received {}\n'
                     ''.format(USER, user)
@@ -72,7 +72,7 @@ def test(config):
         return result, cause
 
     if group != GROUP:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Owner group failed.  Expected {}, received {}\n'
                     ''.format(GROUP, group)
@@ -81,7 +81,7 @@ def test(config):
 
     fperm = utils.get_file_permissions(config, cpus_path)
     if fperm != FPERM:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'File permissions failed.  Expected {}, received {}\n'
                     ''.format(FPERM, fperm)
@@ -90,7 +90,7 @@ def test(config):
 
     dperm = utils.get_file_permissions(config, os.path.join(mnt_path, CGNAME))
     if dperm != DPERM:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Directory permissions failed.  Expected {}, received {}\n'
                     ''.format(DPERM, dperm)

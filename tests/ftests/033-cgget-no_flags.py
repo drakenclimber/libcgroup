@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup
 import ftests
 import sys
@@ -26,13 +26,13 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     out = Cgroup.get(config, controller=None, cgname=CGNAME)
 
     if out.splitlines()[0] != '{}:'.format(CGNAME):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'cgget expected the cgroup name {} in the first line.\n'
                     'Instead it received {}'
@@ -40,7 +40,7 @@ def test(config):
                 )
 
     if len(out.splitlines()) < 5:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = (
                     'Too few lines output by cgget.  Received {} lines'
                     ''.format(len(out.splitlines()))

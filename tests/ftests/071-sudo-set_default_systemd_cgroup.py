@@ -9,7 +9,7 @@
 #
 
 from libcgroup import Version, Cgroup, Mode
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 from process import Process
 from systemd import Systemd
@@ -27,15 +27,15 @@ CONTROLLER = 'cpu'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
@@ -46,7 +46,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     #
@@ -57,11 +57,11 @@ def test(config):
         Cgroup._set_default_systemd_cgroup()
     except RuntimeError as re:
         if 'Failed to set' not in str(re):
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "Expected 'Failed to set' to be in the exception, " \
                     'received {}'.format(str(re))
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = '_set_default_systemd_cgroup() erroneously passed'
 
     #
@@ -80,7 +80,7 @@ def test(config):
     cg_pid = cg.get_processes()[0]
 
     if pid != cg_pid:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Expected pid {} to be in {} cgroup, but received pid {} ' \
                     'via python bindings instead'.format(pid, OTHER_CGNAME, cg_pid)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
@@ -88,7 +88,7 @@ def test(config):
     cli_pid = CgroupCli.get_pids_in_cgroup(config, OTHER_CGNAME, CONTROLLER)[0]
 
     if pid != cli_pid:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'Expected pid {} to be in {} cgroup, but received pid {} ' \
                     'via CLI instead'.format(pid, OTHER_CGNAME, cli_pid)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
@@ -109,12 +109,12 @@ def test(config):
         Cgroup.write_default_systemd_scope(SLICE, SCOPE, True)
     except RuntimeError as re:
         if 'Failed to set' not in str(re):
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = "Expected 'Failed to set' to be in the exception, " \
                         'received {}'.format(str(re))
             cause = '\n'.join(filter(None, [cause, tmp_cause]))
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = 'write_default_systemd_scope() erroneously passed'
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -132,14 +132,14 @@ def test(config):
         cg_pid = cg.get_processes()[0]
 
         if pid != cg_pid:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = "Expected pid {} to be in '/' cgroup, but received pid {} " \
                         'instead'.format(pid, cg_pid)
             cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
         path = Cgroup.get_current_controller_path(pid)
         if path != os.path.join('/', SLICE, SCOPE):
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = 'Expected pid path to be: {}, but received path {} ' \
                         'instead'.format(os.path.join('/', SLICE, SCOPE), path)
             cause = '\n'.join(filter(None, [cause, tmp_cause]))
@@ -147,7 +147,7 @@ def test(config):
         cli_pid = CgroupCli.get_pids_in_cgroup(config, os.path.join(SLICE, SCOPE), CONTROLLER)[0]
 
         if pid != cli_pid:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = 'Expected pid {} to be in {} cgroup, but received pid {} ' \
                         'via CLI instead'.format(pid, os.path.join(SLICE, SCOPE), cli_pid)
             cause = '\n'.join(filter(None, [cause, tmp_cause]))
@@ -173,7 +173,7 @@ def teardown(config, pid):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

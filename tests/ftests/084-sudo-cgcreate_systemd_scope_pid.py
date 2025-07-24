@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from process import Process
 from systemd import Systemd
 from libcgroup import Mode
@@ -24,20 +24,20 @@ CGNAME2 = os.path.join(SLICE, '084cgcreate2.scope')
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if Cgroup.get_cgroup_mode(config) != Mode.CGROUP_MODE_UNIFIED:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the unified cgroup hierarchy'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
@@ -48,7 +48,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     #
@@ -73,11 +73,11 @@ def test(config):
     try:
         pid = Cgroup.get_pids_in_cgroup(config, CGNAME1, CONTROLLERS[0])[0]
         if scope_pid != pid:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'scope created with other pid {}, expected pid {}'.format(pid, scope_pid)
             return result, cause
     except RunError:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = "Failed to read pid in {}'s cgroup.procs".format(CGNAME1)
         return result, cause
 
@@ -94,18 +94,18 @@ def test(config):
         if 'No such file or directory' not in re.stderr:
             raise re
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Erroneously succeeded reading cgroup.procs in {}'.format(CGNAME1)
         return result, cause
 
     try:
         pid = Cgroup.get_pids_in_cgroup(config, CGNAME2, CONTROLLERS[0])[0]
         if scope_pid != pid:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'scope created with other pid {}, expected pid {}'.format(pid, scope_pid)
             return result, cause
     except RunError:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = "Failed to read pid in {}'s cgroup.procs".format(CGNAME2)
 
     return result, cause
@@ -126,7 +126,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

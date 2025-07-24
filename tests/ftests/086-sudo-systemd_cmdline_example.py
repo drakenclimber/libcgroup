@@ -10,7 +10,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 from systemd import Systemd
 from process import Process
@@ -32,20 +32,20 @@ LOW_CGNAME = 'low-priority'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if CgroupCli.get_cgroup_mode(config) != Mode.CGROUP_MODE_UNIFIED:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires the unified cgroup hierarchy'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
@@ -56,7 +56,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     #
@@ -67,7 +67,7 @@ def test(config):
                                   create_scope=True, set_default_scope=True)
 
     if not Systemd.is_delegated(config, SCOPE):
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Cgroup is not delegated'
         return result, cause
 
@@ -81,11 +81,11 @@ def test(config):
         CgroupCli.create_and_validate(config, CONTROLLER_LIST, HIGH_CGNAME)
     except RunError as re:
         if re.ret != 96 or 'No such file or directory' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'Unexpected error when creating {}: {}'.format(HIGH_CGNAME, re.ret)
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Unexpected success when creating {}'.format(HIGH_CGNAME)
         return result, cause
 
@@ -163,7 +163,7 @@ def teardown(config, result):
                                         CONTROLLER_LIST[0])
     Process.kill(config, pids)
 
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         # Something went wrong.  Let's force the removal of the cgroups just to be safe.
         # Note that this should remove the cgroup, but it won't remove it from systemd's
         # internal caches, so the system may not return to its 'pristine' prior-to-this-test
@@ -177,16 +177,16 @@ def teardown(config, result):
         # once there are no processes inside of it
         pass
 
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         setup(config)
         [result, cause] = test(config)
     finally:

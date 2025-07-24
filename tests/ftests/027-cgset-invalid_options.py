@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup
 from run import RunError
 import ftests
@@ -29,7 +29,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     try:
@@ -38,19 +38,19 @@ def test(config):
                    copy_from=CGNAME2)
     except RunError as re:
         if 'Wrong input parameters,' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "#1 Expected 'Wrong input parameters' to be in stderr"
             return result, cause
 
         if re.ret != 129:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#1 Expected return code of 129 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #1 erroneously passed'
         return result, cause
 
@@ -59,19 +59,19 @@ def test(config):
         Cgroup.set(config, cgname=None, setting='cpu.shares', value='100')
     except RunError as re:
         if 'cgset: no cgroup specified' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "#2 Expected 'no cgroup specified' to be in stderr"
             return result, cause
 
         if re.ret != 129:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#2 Expected return code of 129 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #2 erroneously passed'
         return result, cause
 
@@ -80,19 +80,19 @@ def test(config):
         Cgroup.set(config, cgname=CGNAME1)
     except RunError as re:
         if 'cgset: no name-value pair was set' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "#3 Expected 'no name-value pair' to be in stderr"
             return result, cause
 
         if re.ret != 129:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#3 Expected return code of 129 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #3 erroneously passed'
         return result, cause
 
@@ -101,19 +101,19 @@ def test(config):
         Cgroup.set(config)
     except RunError as re:
         if 'Usage is' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "#4 Expected 'Usage is' to be in stderr"
             return result, cause
 
         if re.ret != 129:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#4 Expected return code of 129 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #4 erroneously passed'
         return result, cause
 
@@ -122,26 +122,26 @@ def test(config):
         Cgroup.set(config, cgname=CGNAME1, setting='cpu.shares', value='')
     except RunError as re:
         if 'wrong parameter of option -r' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "#5 Expected 'Wrong parameter of option' to be in stderr"
             return result, cause
 
         if re.ret != 129:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = (
                         '#5 Expected return code of 129 but received {}'
                         ''.format(re.ret)
                     )
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case #5 erroneously passed'
         return result, cause
 
     # cgset -h
     ret = Cgroup.set(config, cghelp=True)
     if 'Usage:' not in ret:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = '#6 Failed to print help text'
 
     return result, cause

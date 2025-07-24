@@ -8,7 +8,7 @@
 #
 
 from cgroup import Cgroup as CgroupCli, CgroupVersion
-from distro import ConstsCommon as consts
+from consts import Consts
 from libcgroup import Cgroup, Version
 import ftests
 import utils
@@ -24,11 +24,11 @@ CTRL_GID = 7890
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if CgroupVersion.get_version(CONTROLLER) != CgroupVersion.CGROUP_V1:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires cgroup v1'
 
     return result, cause
@@ -39,7 +39,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     cg = Cgroup(CGNAME, Version.CGROUP_V1)
@@ -52,12 +52,12 @@ def test(config):
 
     tasks_uid = utils.get_file_owner_uid(config, tasks_path)
     if tasks_uid != TASKS_UID:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = "Expected tasks owner to be {} but it's {}".format(TASKS_UID, tasks_uid)
 
     tasks_gid = utils.get_file_owner_gid(config, tasks_path)
     if tasks_gid != TASKS_GID:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = "Expected tasks group to be {} but it's {}".format(TASKS_GID, tasks_gid)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
@@ -66,13 +66,13 @@ def test(config):
 
     ctrl_uid = utils.get_file_owner_uid(config, ctrl_path)
     if ctrl_uid != CTRL_UID:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = "Expected cgroup.procs owner to be {} but it's {}".format(CTRL_UID, ctrl_uid)
         cause = '\n'.join(filter(None, [cause, tmp_cause]))
 
     ctrl_gid = utils.get_file_owner_gid(config, ctrl_path)
     if ctrl_gid != CTRL_GID:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         tmp_cause = "Expected cgroup.procs group to be {} but it's {}".format(CTRL_GID, ctrl_gid)
         if not cause:
             cause = tmp_cause
@@ -88,7 +88,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

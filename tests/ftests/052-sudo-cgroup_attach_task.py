@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup as CgroupCli
 from libcgroup import Cgroup, Version
 from cgroup import CgroupVersion
@@ -23,16 +23,16 @@ CONTROLLER = 'cpu'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if CgroupVersion.get_version(CONTROLLER) != CgroupVersion.CGROUP_V2:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires cgroup v2'
 
     return result, cause
@@ -45,7 +45,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     cg = Cgroup(CGNAME, Version.CGROUP_V2)
@@ -60,7 +60,7 @@ def test(config):
             found = True
 
     if not found:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Could not find pid {} in cgroup {}'.format(os.getpid(), CGNAME)
         return result, cause
 
@@ -76,7 +76,7 @@ def test(config):
             found = True
 
     if found:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'pid {} was erroneously found in cgroup {}'.format(os.getpid(), CGNAME)
 
     return result, cause
@@ -92,11 +92,11 @@ def teardown(config, result):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         setup(config)
         [result, cause] = test(config)
     finally:

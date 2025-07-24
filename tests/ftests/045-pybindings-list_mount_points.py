@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from libcgroup import Cgroup, Version
 import ftests
 import sys
@@ -17,11 +17,11 @@ CGNAME = '045bindings'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
 
     return result, cause
@@ -32,13 +32,13 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     mount_points_v1 = Cgroup.mount_points(Version.CGROUP_V1)
     mount_points_v2 = Cgroup.mount_points(Version.CGROUP_V2)
     if not mount_points_v1 and not mount_points_v2:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = ('No cgroup mount point found')
 
     return result, cause
@@ -50,7 +50,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

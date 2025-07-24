@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 from libcgroup import Mode
 import ftests
@@ -24,14 +24,14 @@ CPUSET_SETTING_MEMS = 'cpuset.mems'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     # This test has shown inconsistent failures on underpowered legacy
     # machines when run within a container.  Skip that configuration
     if Cgroup.get_cgroup_mode(config) == Mode.CGROUP_MODE_LEGACY and \
        config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Skip this test in containerized legacy hierarchies'
 
     return result, cause
@@ -70,7 +70,7 @@ def setup(config):
 def test(config):
     Cgroup.delete(config, CONTROLLER, PARENT, recursive=True)
 
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def teardown(config):
@@ -79,7 +79,7 @@ def teardown(config):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     setup(config)

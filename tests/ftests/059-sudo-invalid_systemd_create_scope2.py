@@ -8,7 +8,7 @@
 #
 
 from cgroup import CgroupVersion as CgroupCliVersion
-from distro import ConstsCommon as consts
+from consts import Consts
 from libcgroup import Cgroup, Version
 from systemd import Systemd
 import ftests
@@ -21,20 +21,20 @@ CONTROLLER = 'cpu'
 
 
 def prereqs(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     if config.args.container:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test cannot be run within a container'
         return result, cause
 
     if CgroupCliVersion.get_version(CONTROLLER) != CgroupCliVersion.CGROUP_V2:
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'This test requires cgroup v2'
 
     if not Systemd.is_systemd_enabled():
-        result = consts.TEST_SKIPPED
+        result = Consts.TEST_SKIPPED
         cause = 'Systemd support not compiled in'
 
     return result, cause
@@ -45,7 +45,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     cg1 = Cgroup('InvalidNameBecauseNoSlash', Version.CGROUP_V2)
@@ -54,10 +54,10 @@ def test(config):
         cg1.create_scope2()
     except RuntimeError as re:
         if '50011' not in str(re):
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'Expected ECGINVAL (50011) but received {}'.format(re)
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'An invalid cgroup name unexpectedly passed: {}'.format(cg1.name)
 
     cg2 = Cgroup('Invalid/TooMany/Slashes', Version.CGROUP_V2)
@@ -66,14 +66,14 @@ def test(config):
         cg2.create_scope2()
     except RuntimeError as re:
         if '50011' not in str(re):
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = 'Expected ECGINVAL (50011) but received {}'.format(re)
             if not cause:
                 cause = tmp_cause
             else:
                 cause = '{}\n{}'.format(cause, tmp_cause)
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'An invalid cgroup name unexpectedly passed: {}'.format(cg1.name)
         if not cause:
             cause = tmp_cause
@@ -89,11 +89,11 @@ def teardown(config, result):
 
 def main(config):
     [result, cause] = prereqs(config)
-    if result != consts.TEST_PASSED:
+    if result != Consts.TEST_PASSED:
         return [result, cause]
 
     try:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         setup(config)
         [result, cause] = test(config)
     finally:

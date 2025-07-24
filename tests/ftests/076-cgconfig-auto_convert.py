@@ -7,7 +7,7 @@
 # Author: Kamalesh Babulal <kamalesh.babulal@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup, CgroupVersion
 import ftests
 import sys
@@ -54,7 +54,7 @@ TABLE = [
 
 
 def prereqs(config):
-    return consts.TEST_PASSED, None
+    return Consts.TEST_PASSED, None
 
 
 def setup(config):
@@ -64,7 +64,7 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     Cgroup.configparser(config, load_file=CONFIG_FILE_NAME)
@@ -76,7 +76,7 @@ def test(config):
                          )
 
         if out != entry[3]:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             tmp_cause = (
                             'Expected {}={}, received {}={} '
                             ''.format(entry[1], entry[3], entry[1], out)

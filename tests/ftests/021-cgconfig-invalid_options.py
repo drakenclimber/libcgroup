@@ -7,7 +7,7 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
+from consts import Consts
 from cgroup import Cgroup
 from run import RunError
 import ftests
@@ -40,12 +40,12 @@ def setup(config):
 
 
 def test(config):
-    result = consts.TEST_PASSED
+    result = Consts.TEST_PASSED
     cause = None
 
     ret = Cgroup.configparser(config, cghelp=True)
     if 'Parse and load the specified cgroups' not in ret:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Failed to print cgconfigparser help text'
         return result, cause
 
@@ -53,16 +53,16 @@ def test(config):
         Cgroup.configparser(config, load_file=CONFIG_FILE_NAME)
     except RunError as re:
         if 'Invalid argument' not in re.stderr:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = "Expected 'Invalid argument' to be in stderr"
             return result, cause
 
         if re.ret != 96:
-            result = consts.TEST_FAILED
+            result = Consts.TEST_FAILED
             cause = 'Expected return code of 96 but received {}'.format(re.ret)
             return result, cause
     else:
-        result = consts.TEST_FAILED
+        result = Consts.TEST_FAILED
         cause = 'Test case erroneously passed'
 
     return result, cause

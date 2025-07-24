@@ -6,8 +6,8 @@
 # Author: Tom Hromatka <tom.hromatka@oracle.com>
 #
 
-from distro import ConstsCommon as consts
 from run import Run, RunError
+from consts import Consts
 from queue import Queue
 import threading as tp
 from log import Log
@@ -24,22 +24,22 @@ class Container(object):
         if stop_timeout:
             self.stop_timeout = stop_timeout
         else:
-            self.stop_timeout = consts.DEFAULT_CONTAINER_STOP_TIMEOUT
+            self.stop_timeout = Consts.DEFAULT_CONTAINER_STOP_TIMEOUT
 
         if arch:
             self.arch = arch
         else:
-            self.arch = consts.DEFAULT_CONTAINER_ARCH
+            self.arch = Consts.DEFAULT_CONTAINER_ARCH
 
         if distro:
             self.distro = distro
         else:
-            self.distro = consts.DEFAULT_CONTAINER_DISTRO
+            self.distro = Consts.DEFAULT_CONTAINER_DISTRO
 
         if release:
             self.release = release
         else:
-            self.release = consts.DEFAULT_CONTAINER_RELEASE
+            self.release = Consts.DEFAULT_CONTAINER_RELEASE
 
         ftest_dir = os.path.dirname(os.path.abspath(__file__))
         tests_dir = os.path.dirname(ftest_dir)
