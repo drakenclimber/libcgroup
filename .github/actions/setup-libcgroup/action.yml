@@ -13,11 +13,15 @@ runs:
   steps:
   - run: |
       while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 3; done
+      sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+    shell: bash
+  - run: |
+      while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 3; done
       sudo apt-get update
     shell: bash
   - run: |
       while sudo fuser /var/{lib/{dpkg,apt/lists},cache/apt/archives}/lock >/dev/null 2>&1; do sleep 3; done
-      sudo apt-get install libpam-dev lcov python3-pip python3-dev cmake bison flex byacc g++ autoconf automake libtool libsystemd-dev -y
+      sudo apt-get install libpam-dev lcov python3-pip python3-dev cmake bison flex byacc g++-8 gcc-8 autoconf automake libtool libsystemd-dev -y
     shell: bash
   - run: sudo pip install cython
     shell: bash

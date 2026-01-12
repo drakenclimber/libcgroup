@@ -14,7 +14,7 @@ git submodule update --init --recursive
 
 # configure googletest
 pushd googletest
-git checkout v1.12.0
+git checkout v1.17.0
 mkdir -p build
 cd build
 cmake .. -DBUILD_GMOCK=OFF
